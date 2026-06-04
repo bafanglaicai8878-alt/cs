@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Web 入库工具</title>
+  <link rel="stylesheet" href="/static/theme.css" />
+  <style>
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 13px; color: #6b7280; margin-bottom: 6px; font-weight: 500; }
+    .field input { width: 100%; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 14px; box-sizing: border-box; font-family: ui-monospace, monospace; }
+    .btn { width: 100%; padding: 13px; background: #6366f1; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .log { margin-top: 16px; padding: 14px; background: #0f172a; color: #e2e8f0; border-radius: 10px; font-size: 13px; min-height: 60px; font-family: ui-monospace, monospace; }
+    .tip { font-size: 12px; color: #6b7280; margin-bottom: 16px; line-height: 1.6; }
+  </style>
+</head>
+<body class="public-page">
+  <div class="pub-header">
+    <h1>Web 轻量入库</h1>
+    <p>浏览器端游戏入库到服务器沙箱</p>
+  </div>
+  <div class="pub-card">
+    <p class="tip">请先在管理台登录，从浏览器开发者工具 Network 中复制 Bearer Token。</p>
+    <div class="field"><label>Bearer Token</label><input id="token" type="password" placeholder="登录 admin 后获取" /></div>
+    <div class="field"><label>AppID</label><input id="appid" placeholder="730" /></div>
+    <button class="btn" onclick="doImport()">开始入库</button>
+    <div class="log" id="log">等待操作…</div>
+  </div>
+  <nav class="pub-nav">
+    <a href="__PUBLIC_URL__/admin/login">管理登录</a>
+    <a href="__PUBLIC_URL__">返回首页</a>
+  </nav>
+  <script>
+    const BASE = "__PUBLIC_URL__";
+    async function doImport() {
+      const token = document.getElementById("token").value.trim();
+      const appid = document.getElementById("appid").value.trim();
+      const log = document.getElementById("log");
+      if (!token || !appid) { log.textContent = "请填写 Token 和 AppID"; return; }
+      log.textContent = "入库中…";
+      const r = await fetch(BASE + "/api/web-box/import", { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token }, body: JSON.stringify({ appid }) }).then(x => x.json());
+      log.textContent = r.ok ? "✓ " + (r.message || "成功") : "✗ " + (r.message || "失败");
+    }
+  </script>
+</body>
+</html>

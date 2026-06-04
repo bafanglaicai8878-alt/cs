@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>收银台 · 账户充值</title>
+  <link rel="stylesheet" href="/static/theme.css" />
+  <style>
+    body { min-height: 100vh; background: linear-gradient(160deg, #eef2ff 0%, #f8fafc 45%, #ecfdf5 100%); display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .cashier { width: 100%; max-width: 420px; background: #fff; border-radius: 20px; box-shadow: 0 20px 50px rgba(15,23,42,.08); overflow: hidden; border: 1px solid rgba(226,232,240,.9); }
+    .cashier-head { padding: 28px 28px 20px; text-align: center; border-bottom: 1px solid var(--border, #e2e8f0); background: linear-gradient(180deg, #fff 0%, #f8fafc 100%); }
+    .cashier-head .logo { font-size: 13px; color: var(--muted, #64748b); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+    .cashier-head h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .cashier-head p { font-size: 13px; color: var(--muted, #64748b); }
+    .amount-box { padding: 28px; text-align: center; }
+    .amount-label { font-size: 13px; color: var(--muted, #64748b); margin-bottom: 8px; }
+    .amount-val { font-size: 42px; font-weight: 800; color: #0f172a; letter-spacing: -.02em; }
+    .amount-val small { font-size: 22px; font-weight: 700; margin-right: 2px; }
+    .order-meta { padding: 0 28px 20px; display: grid; gap: 10px; }
+    .meta-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+    .meta-row span:first-child { color: var(--muted, #64748b); flex-shrink: 0; }
+    .meta-row span:last-child { text-align: right; word-break: break-all; color: #334155; }
+    .pay-method { margin: 0 28px 20px; padding: 14px 16px; border: 1px solid #dbeafe; border-radius: 14px; background: #eff6ff; display: flex; align-items: center; gap: 12px; }
+    .pay-method .icon { width: 40px; height: 40px; border-radius: 10px; background: #1677ff; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; }
+    .pay-method .name { font-weight: 600; font-size: 15px; }
+    .pay-method .desc { font-size: 12px; color: var(--muted, #64748b); margin-top: 2px; }
+    .cashier-foot { padding: 0 28px 28px; display: grid; gap: 10px; }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; background: #1677ff; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
+    .btn:hover { background: #0958d9; }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .btn.secondary { background: #fff; color: #334155; border: 1px solid var(--border, #e2e8f0); font-size: 14px; font-weight: 600; }
+    .status-pill { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .status-pill.pending { background: #fef3c7; color: #b45309; }
+    .status-pill.paid { background: #dcfce7; color: #15803d; }
+    .hint { font-size: 12px; color: var(--muted, #64748b); text-align: center; line-height: 1.6; }
+    .loading, .error-box { padding: 48px 28px; text-align: center; color: var(--muted, #64748b); }
+    .error-box { color: #b91c1c; }
+    .hidden { display: none !important; }
+    .qr-wrap { margin: 0 28px 16px; text-align: center; }
+    .qr-wrap img { max-width: 200px; border-radius: 12px; border: 1px solid var(--border, #e2e8f0); }
+  </style>
+</head>
+<body>
+  <div class="cashier">
+    <div id="viewLoading" class="loading">正在加载订单…</div>
+    <div id="viewError" class="error-box hidden"></div>
+    <div id="viewPaid" class="hidden">
+      <div class="cashier-head">
+        <div class="logo">Payment</div>
+        <h1>支付成功</h1>
+        <p>余额已到账，正在返回…</p>
+      </div>
+      <div class="amount-box"><div class="amount-val"><small>¥</small><span id="paidAmount">0.00</span></div></div>
+    </div>
+    <div id="viewPay" class="hidden">
+      <div class="cashier-head">
+        <div class="logo">Secure Checkout</div>
+        <h1>收银台</h1>
+        <p>请确认订单并完成支付</p>
+      </div>
+      <div class="amount-box">
+        <div class="amount-label">应付金额</div>
+        <div class="amount-val"><small>¥</small><span id="payAmount">0.00</span></div>
+      </div>
+      <div class="order-meta">
+        <div class="meta-row"><span>订单号</span><span id="orderId">-</span></div>
+        <div class="meta-row"><span>商品</span><span>账户余额充值</span></div>
+        <div class="meta-row"><span>状态</span><span id="orderStatus"><span class="status-pill pending">待支付</span></span></div>
+        <div class="meta-row"><span>创建时间</span><span id="orderTime">-</span></div>
+      </div>
+      <div class="pay-method">
+        <div class="icon">支</div>
+        <div><div class="name">支付宝</div><div class="desc">GoPay 安全收银 · 支付完成后自动到账</div></div>
+      </div>
+      <div class="qr-wrap hidden" id="qrWrap"><img id="qrImg" alt="支付二维码" /></div>
+      <div class="cashier-foot">
+        <button class="btn" id="payBtn" onclick="goPay()">前往支付</button>
+        <button class="btn secondary" onclick="location.href='/portal?page=recharge'">返回充值页</button>
+        <div class="hint">支付完成后本页将自动检测到账<br/>若已支付请稍候，无需重复付款</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const TOKEN_KEY = "portal_token";
+    let token = localStorage.getItem(TOKEN_KEY) || "";
+    let orderId = new URLSearchParams(location.search).get("order") || "";
+    let checkoutUrl = "";
+    let pollTimer = null;
+    let autoPayDone = false;
+
+    function syncToken() {
+      token = localStorage.getItem(TOKEN_KEY) || "";
+      return token;
+    }
+
+    function authHeaders() {
+      syncToken();
+      const h = {};
+      if (token) h.Authorization = "Bearer " + token;
+      return h;
+    }
+
+    function goLogin() {
+      location.href = "/login?next=" + encodeURIComponent(location.pathname + location.search);
+    }
+
+    async function api(path) {
+      const r = await fetch(path, { credentials: "same-origin", headers: authHeaders() });
+      let d = {};
+      try { d = await r.json(); } catch (_) {}
+      d._status = r.status;
+      if (r.status === 401) goLogin();
+      return d;
+    }
+
+    function show(id) {
+      ["viewLoading", "viewError", "viewPay", "viewPaid"].forEach(v => {
+        document.getElementById(v).classList.toggle("hidden", v !== id);
+      });
+    }
+
+    function fmtMoney(n) { return (Number(n) || 0).toFixed(2); }
+
+    function isValidPayUrl(url) {
+      return !!url && url !== "success" && url !== "ok" &&
+        (/^https?:\/\//i.test(url) || /^alipays:/i.test(url) || /^weixin:/i.test(url));
+    }
+
+    function renderOrder(order) {
+      document.getElementById("payAmount").textContent = fmtMoney(order.amount_cny);
+      document.getElementById("orderId").textContent = order.id || "-";
+      document.getElementById("orderTime").textContent = order.created_at || "-";
+      checkoutUrl = order.checkout_url || order.payurl || order.pay_submit_url || "";
+      if (order.status === "paid") {
+        document.getElementById("paidAmount").textContent = fmtMoney(order.amount_cny);
+        show("viewPaid");
+        clearInterval(pollTimer);
+        setTimeout(() => { location.href = "/portal?page=recharge&paid=1"; }, 1800);
+        return;
+      }
+      if (order.qrcode && /^https?:\/\//i.test(order.qrcode)) {
+        document.getElementById("qrWrap").classList.remove("hidden");
+        document.getElementById("qrImg").src = order.qrcode;
+      }
+      show("viewPay");
+      if (!isValidPayUrl(checkoutUrl)) {
+        document.getElementById("payBtn").disabled = true;
+        document.getElementById("payBtn").textContent = "支付链接无效";
+      }
+    }
+
+    function goPay() {
+      if (!isValidPayUrl(checkoutUrl)) return;
+      autoPayDone = true;
+      window.location.assign(checkoutUrl);
+    }
+
+    async function pollOrder() {
+      if (!orderId) return;
+      const d = await api("/api/payment/order/" + encodeURIComponent(orderId));
+      if (d._status === 401) return;
+      if (!d.ok) return;
+      renderOrder(d.order || {});
+    }
+
+    async function init() {
+      if (!orderId) {
+        show("viewError");
+        document.getElementById("viewError").textContent = "缺少订单号";
+        return;
+      }
+      const d = await api("/api/payment/order/" + encodeURIComponent(orderId));
+      if (d._status === 401) return;
+      if (!d.ok) {
+        show("viewError");
+        document.getElementById("viewError").textContent = d.message || "订单加载失败";
+        return;
+      }
+      renderOrder(d.order || {});
+      pollTimer = setInterval(pollOrder, 3000);
+      if (isValidPayUrl(checkoutUrl)) {
+        setTimeout(goPay, 800);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

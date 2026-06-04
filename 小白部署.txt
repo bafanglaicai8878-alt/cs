@@ -1,0 +1,69 @@
+═══════════════════════════════════════════════════
+  CS Steam 游戏盒子 — 小白部署（3 步）
+  不影响宝塔 / wwwroot 里的网站
+═══════════════════════════════════════════════════
+
+【第 1 步】上传并解压
+────────────────────
+1. 把整个文件夹打成 zip（或直接用文件夹）
+2. 用宝塔「文件」、SFTP、或 scp 上传到服务器
+3. 解压到：/opt/cai-install_stloader
+   ※ 不要解压到 /www/wwwroot 里面！
+
+【第 2 步】只改 1 个文件
+────────────────────
+用记事本打开：public_url.txt
+
+把里面改成你的公网地址，例如：
+  http://107.151.244.244:8787
+
+保存。
+
+【若使用 MySQL】编辑 config.json 的 Database 段：
+  "engine": "mysql"
+  "host" / "user" / "password" / "database" 改成宝塔里创建的库
+
+【若提示 No module named pip】先执行一次：
+  apt update && apt install -y python3-pip
+
+【第 3 步】运行
+────────────────────
+SSH 连上服务器后执行：
+
+  cd /opt/cai-install_stloader
+  bash 运行.sh
+
+想关掉终端也继续跑，用：
+
+  bash 后台运行.sh
+
+【宝塔 / Nginx 反代】务必关闭 API 缓存
+  若站点开了「代理缓存」，/api/* 会被不同用户共用，
+  会出现「登录 A 账号却显示 B 账号」。已在 steamo.icu 反代中
+  对 /api/、/portal、/login、/admin 禁用缓存；其它域名请同样处理。
+
+【云服务器】安全组放行 TCP 8787（不用动 80/443）
+
+【打开后台】
+  http://你的IP:8787/admin/login
+  账号 admin  密码 admin123  （登录后请改密码）
+
+【GitHub Token（可选，加速清单同步）】
+  后台 → 系统设置 → GitHub Token
+  每行填一个 Token，多个可叠加配额
+
+【扩展功能】（已并入管理台 → 扩展中心）
+  用户查 CDK: http://你的IP:8787/user-center
+  卡密商城:   http://你的IP:8787/shop
+
+【MySQL 备份】
+  bash scripts/backup_mysql.sh
+
+【systemd 开机自启（可选）】
+  cp systemd/cai-stloader.service /etc/systemd/system/
+  systemctl enable --now cai-stloader
+
+【停止后台服务】
+  bash stop_web.sh
+
+═══════════════════════════════════════════════════

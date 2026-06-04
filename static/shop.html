@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CDK 卡密商城</title>
+  <link rel="stylesheet" href="/static/theme.css" />
+  <style>
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; width: min(960px, 100%); }
+    .pkg { background: #fff; border-radius: 14px; padding: 22px; box-shadow: 0 8px 32px rgba(0,0,0,.12); border: 1px solid rgba(255,255,255,.2); }
+    .pkg h3 { margin: 0 0 6px; font-size: 17px; }
+    .price { color: #6366f1; font-size: 26px; font-weight: 700; margin: 12px 0; }
+    .muted { color: #6b7280; font-size: 13px; }
+    .btn { width: 100%; margin-top: 14px; padding: 12px; background: #6366f1; color: #fff; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    .btn:hover { background: #4f46e5; }
+    .order { width: min(480px, 100%); background: #fff; border-radius: 14px; padding: 22px; margin-top: 20px; display: none; box-shadow: 0 8px 32px rgba(0,0,0,.15); }
+  </style>
+</head>
+<body class="public-page">
+  <div class="pub-header">
+    <h1 id="title">CDK 卡密商城</h1>
+    <p id="desc">在线选购游戏激活码</p>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="order" id="orderBox">
+    <h3 style="margin-bottom:12px">订单已创建</h3>
+    <p id="orderInfo" class="muted"></p>
+    <p class="muted" style="margin-top:12px">请联系客服完成支付并发放 CDK</p>
+  </div>
+  <nav class="pub-nav">
+    <a href="__PUBLIC_URL__/user-center">查询 CDK</a>
+    <a href="__PUBLIC_URL__">返回首页</a>
+  </nav>
+  <script>
+    const BASE = "__PUBLIC_URL__";
+    async function load() {
+      const d = await fetch(BASE + "/api/public/mall/packages").then(r => r.json());
+      if (d.settings) {
+        document.getElementById("title").textContent = d.settings.title || "CDK 卡密商城";
+        document.getElementById("desc").textContent = d.settings.description || "";
+      }
+      document.getElementById("grid").innerHTML = (d.packages || []).map(p => `
+        <div class="pkg">
+          <h3>${p.name}</h3>
+          <div class="muted">AppID ${p.appid}</div>
+          <div class="price">¥${p.price_cny}</div>
+          <div class="muted">${p.description || ""}</div>
+          <button class="btn" onclick="buy('${p.id}')">立即购买</button>
+        </div>`).join("") || '<p style="color:#c7d2fe;text-align:center;grid-column:1/-1">暂无套餐</p>';
+    }
+    async function buy(id) {
+      const contact = prompt("联系方式（QQ/微信/邮箱）") || "";
+      const r = await fetch(BASE + "/api/public/mall/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ package_id: id, contact }) }).then(x => x.json());
+      if (!r.ok) return alert(r.message || "失败");
+      document.getElementById("orderBox").style.display = "block";
+      document.getElementById("orderInfo").innerHTML = `订单号 <b>${r.order.id}</b><br>金额 ¥${r.order.price_cny}`;
+    }
+    load();
+  </script>
+</body>
+</html>

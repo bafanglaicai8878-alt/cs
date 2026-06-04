@@ -1,0 +1,10 @@
+{
+  "settings": {
+    "site_name": "CS Steam 管理台",
+    "session_hours": 24,
+    "base_cdk_price": 0.1
+  },
+  "users": {},
+  "sessions": {},
+  "commission_logs": []
+}

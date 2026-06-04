@@ -1,0 +1,15 @@
+[Unit]
+Description=CS Steam Web CDK Server
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/cai-install_stloader
+Environment=PUBLIC_URL_OVERRIDE=
+ExecStart=/usr/bin/python3 web_server.py --host 0.0.0.0 --port 8787
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

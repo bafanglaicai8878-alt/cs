@@ -1,0 +1,64 @@
+═══════════════════════════════════════════════════
+  把整个 cai-install_stloader 拷到本机（Windows / Mac）
+═══════════════════════════════════════════════════
+
+【方式一】浏览器下载 zip（最简单）
+────────────────────
+1. 在服务器上打包（SSH 执行一次）：
+     cd /opt/cai-install_stloader
+     bash pack_client.sh
+
+2. 本机浏览器打开（把域名换成你的）：
+     https://steamo.icu/static/playgame-client.zip
+
+3. 解压到任意目录，例如：
+     D:\playgame\cai-install_stloader
+     或 Mac：~/Downloads/cai-install_stloader
+
+4. 启动客户端：
+     Windows → 双击 start_box.bat
+     Mac     → bash start_box_mac.sh
+     Linux   → bash start_box.sh
+
+※ 若 404：确认网站反代能访问 /static/ 目录下的文件。
+
+
+【方式二】SCP 命令（整文件夹，不打包）
+────────────────────
+把下面命令里的「服务器IP」和路径改成你的。
+
+Windows（PowerShell，需 OpenSSH 客户端）：
+  scp -r root@服务器IP:/opt/cai-install_stloader D:\playgame\
+
+Mac / Linux 终端：
+  scp -r root@服务器IP:/opt/cai-install_stloader ~/Downloads/
+
+拷完后进入目录启动：
+  cd ~/Downloads/cai-install_stloader
+  bash start_box_mac.sh          # Mac 预览 UI
+  python3 frontend_box.py        # Mac 正式
+
+
+【方式三】宝塔 / SFTP
+────────────────────
+1. 宝塔「文件」→ 进入 /opt/cai-install_stloader
+2. 全选 → 压缩 zip → 下载到本机 → 解压
+3. 或 FileZilla / WinSCP 连服务器，拖拽整个文件夹到本机
+
+
+【本机环境要求】
+────────────────────
+· Python 3.10 或以上
+· Windows 安装 Python 时勾选 tcl/tk（tkinter）
+· Mac 缺 tkinter：brew install python-tk
+
+config.json 里已有 Box_Server_URL（线上账号），
+本机客户端登录后与代理后台同一套账号。
+
+
+【不要做的事】
+────────────────────
+· 不要把本机 zip 再上传覆盖服务器正在运行的目录（会停服）
+· 服务器继续用 SSH 跑 后台运行.sh；本机只跑 frontend_box.py
+
+═══════════════════════════════════════════════════

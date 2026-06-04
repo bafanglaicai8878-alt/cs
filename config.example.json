@@ -1,0 +1,43 @@
+{
+  "Github_Personal_Token": "",
+  "Github_Personal_Tokens": [],
+  "Steam_Web_API_Key": "",
+  "Full_Steam_Catalog": true,
+  "Only_Importable_Games": true,
+  "Catalog_Merge_On_Sync": true,
+  "Catalog_Auto_Sync_Enabled": true,
+  "Catalog_Auto_Sync_Hours": 24,
+  "Catalog_Github_Max_Pages": 0,
+  "Custom_Steam_Path": "d:\\steam",
+  "Force_Unlocker": "steamtools",
+  "CDK": {
+    "enabled": true,
+    "one_time_use": true,
+    "secret": "请改成随机字符串"
+  },
+  "Custom_Repos": {
+    "github": [],
+    "zip": []
+  },
+  "Vip_Codes": {
+    "BOX-VIP-30": 30,
+    "BOX-VIP-FOREVER": 0
+  },
+  "Vip_Code_Days": 30,
+  "Box_Server_URL": "http://127.0.0.1:8787",
+  "Box_Vip_Days_Per_CDK": 30,
+  "Server": {
+    "host": "0.0.0.0",
+    "port": 8787,
+    "public_url": ""
+  },
+  "Database": {
+    "enabled": true,
+    "engine": "mysql",
+    "host": "127.0.0.1",
+    "port": 3306,
+    "user": "cai_stloader",
+    "password": "请改成数据库密码",
+    "database": "cai_stloader"
+  }
+}

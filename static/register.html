@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>代理注册</title>
+  <style>
+    :root {
+      --bg: #eef1f6; --primary: #4a9ced; --primary-dark: #2d7fd4;
+      --text: #1e293b; --muted: #64748b; --border: #e2e8f0; --danger: #ef4444; --ok: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .wrap { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+    .brand {
+      background: linear-gradient(145deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+      color: #fff; padding: 48px; display: flex; flex-direction: column; justify-content: center;
+    }
+    .brand h1 { font-size: 32px; margin-bottom: 12px; }
+    .brand p { color: #94a3b8; max-width: 360px; line-height: 1.6; }
+    .brand ul { margin-top: 28px; list-style: none; }
+    .brand li { padding: 10px 0; color: #cbd5e1; display: flex; align-items: center; gap: 10px; }
+    .brand li::before { content: ""; width: 6px; height: 6px; background: var(--primary); border-radius: 50%; }
+    .form-wrap { display: flex; align-items: center; justify-content: center; padding: 32px; }
+    .box { width: 100%; max-width: 400px; }
+    .box h2 { font-size: 24px; margin-bottom: 8px; }
+    .box .sub { color: var(--muted); margin-bottom: 20px; font-size: 14px; line-height: 1.5; }
+    .inviter-box {
+      padding: 12px 14px; border-radius: 10px; background: #eff6ff; border: 1px solid #bfdbfe;
+      font-size: 13px; margin-bottom: 18px; display: none;
+    }
+    .inviter-box.ok { display: block; }
+    .inviter-box.err { display: block; background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    .field input {
+      width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 10px;
+      font-size: 14px; background: #fff; text-transform: none;
+    }
+    .field input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,156,237,.15); }
+    .field input[readonly] { background: #f8fafc; color: var(--muted); letter-spacing: 1px; font-weight: 600; }
+    .field .req { color: var(--danger); }
+    .btn {
+      width: 100%; padding: 12px; border: none; border-radius: 10px; background: var(--primary);
+      color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px;
+    }
+    .btn:hover { background: var(--primary-dark); }
+    .btn:disabled { opacity: .55; cursor: not-allowed; }
+    .err { color: var(--danger); font-size: 13px; margin-top: 12px; display: none; }
+    .ok-msg { color: var(--ok); font-size: 13px; margin-top: 12px; display: none; }
+    .foot { margin-top: 20px; text-align: center; font-size: 13px; color: var(--muted); }
+    .foot a { color: var(--primary-dark); text-decoration: none; }
+    .foot a:hover { text-decoration: underline; }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #065f46; color: #fff; padding: 10px 18px; border-radius: 999px; opacity: 0; transition: .25s; z-index: 100;
+    }
+    .toast.show { opacity: 1; }
+    .toast.err { background: #991b1b; }
+    @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; } .brand { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <h1>加入代理团队</h1>
+      <p>须通过上级代理分享的邀请链接或邀请码注册，注册后自动绑定上下级关系。</p>
+      <ul>
+        <li>必须使用有效邀请码</li>
+        <li>注册即可生成 CDK、管理客户</li>
+        <li>注册成功后返回登录页</li>
+      </ul>
+    </div>
+    <div class="form-wrap">
+      <div class="box">
+        <h2>代理注册</h2>
+        <p class="sub">请填写邀请码与账号信息（无邀请码无法注册）</p>
+        <div class="inviter-box" id="inviterBox"></div>
+        <div class="field">
+          <label>邀请码 <span class="req">*</span></label>
+          <input id="inviteCode" placeholder="8 位邀请码" maxlength="32" autocomplete="off" />
+        </div>
+        <div class="field"><label>用户名 <span class="req">*</span></label><input id="regUser" autocomplete="username" placeholder="至少 3 位" /></div>
+        <div class="field"><label>显示名称</label><input id="regName" placeholder="可选" /></div>
+        <div class="field"><label>密码 <span class="req">*</span></label><input id="regPass" type="password" autocomplete="new-password" placeholder="至少 8 位，含字母和数字" /></div>
+        <div class="field"><label>确认密码 <span class="req">*</span></label><input id="regPass2" type="password" autocomplete="new-password" placeholder="再次输入密码" /></div>
+        <button class="btn" id="regBtn" onclick="doRegister()" disabled>注 册</button>
+        <p class="err" id="regErr"></p>
+        <p class="ok-msg" id="regOk"></p>
+        <p class="foot">已有账号？<a href="/login">返回登录</a></p>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script>
+    let inviteValid = false;
+
+    function toast(msg, isErr) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast show" + (isErr ? " err" : "");
+      setTimeout(() => el.classList.remove("show"), 2600);
+    }
+
+    function getCodeFromUrl() {
+      const p = new URLSearchParams(location.search);
+      return (p.get("code") || p.get("invite") || "").trim().toUpperCase();
+    }
+
+    async function verifyInvite(code) {
+      const box = document.getElementById("inviterBox");
+      const btn = document.getElementById("regBtn");
+      inviteValid = false;
+      btn.disabled = true;
+      code = (code || "").trim().toUpperCase();
+      if (!code) {
+        box.className = "inviter-box err";
+        box.textContent = "请通过上级分享的邀请链接打开，或手动输入邀请码";
+        return;
+      }
+      try {
+        const d = await fetch("/api/public/invite?code=" + encodeURIComponent(code)).then(r => r.json());
+        if (!d.ok) {
+          box.className = "inviter-box err";
+          box.textContent = d.message || "邀请码无效";
+          return;
+        }
+        box.className = "inviter-box ok";
+        box.innerHTML = "邀请人：<b>" + (d.inviter_name || d.inviter_username) + "</b> · 初始额度 " + (d.default_quota || 100)
+          + " · CDK 成本价 <b>" + (d.register_cost_price != null ? Number(d.register_cost_price).toFixed(2) : "-") + "</b>";
+        inviteValid = true;
+        btn.disabled = false;
+      } catch (_) {
+        box.className = "inviter-box err";
+        box.textContent = "无法验证邀请码，请稍后重试";
+      }
+    }
+
+    async function doRegister() {
+      const invite_code = document.getElementById("inviteCode").value.trim().toUpperCase();
+      const username = document.getElementById("regUser").value.trim();
+      const display_name = document.getElementById("regName").value.trim();
+      const password = document.getElementById("regPass").value;
+      const password2 = document.getElementById("regPass2").value;
+      const errEl = document.getElementById("regErr");
+      const okEl = document.getElementById("regOk");
+      errEl.style.display = "none";
+      okEl.style.display = "none";
+      if (!invite_code) { errEl.textContent = "请填写邀请码"; errEl.style.display = "block"; return; }
+      if (!inviteValid) { errEl.textContent = "邀请码未通过验证"; errEl.style.display = "block"; return; }
+      if (password !== password2) { errEl.textContent = "两次密码不一致"; errEl.style.display = "block"; return; }
+      document.getElementById("regBtn").disabled = true;
+      try {
+        const d = await fetch("/api/public/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password, invite_code, display_name }),
+        }).then(r => r.json());
+        if (!d.ok) {
+          errEl.textContent = d.message || "注册失败";
+          errEl.style.display = "block";
+          toast(d.message || "注册失败", true);
+          document.getElementById("regBtn").disabled = false;
+          return;
+        }
+        okEl.textContent = "注册成功！3 秒后跳转登录…";
+        okEl.style.display = "block";
+        toast("注册成功");
+        setTimeout(() => { location.href = "/login"; }, 3000);
+      } catch (_) {
+        errEl.textContent = "网络错误";
+        errEl.style.display = "block";
+        document.getElementById("regBtn").disabled = false;
+      }
+    }
+
+    (function init() {
+      const codeInput = document.getElementById("inviteCode");
+      const urlCode = getCodeFromUrl();
+      if (urlCode) {
+        codeInput.value = urlCode;
+        codeInput.readOnly = true;
+      }
+      verifyInvite(codeInput.value || urlCode);
+      codeInput.addEventListener("change", () => verifyInvite(codeInput.value));
+      codeInput.addEventListener("blur", () => verifyInvite(codeInput.value));
+      document.getElementById("regPass2").addEventListener("keydown", e => { if (e.key === "Enter") doRegister(); });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>代理工作台</title>
+  <link rel="stylesheet" href="/static/theme.css" />
+  <style>
+    :root {
+      --bg: #eef1f6; --sidebar: #0f172a; --sidebar-text: #94a3b8;
+      --sidebar-active: rgba(74,156,237,.18); --sidebar-active-text: #7ec4ff;
+      --card: #fff; --primary: #4a9ced; --primary-dark: #2d7fd4;
+      --text: #1e293b; --muted: #64748b; --border: #e2e8f0;
+      --ok: #10b981; --danger: #ef4444; --shadow: 0 1px 3px rgba(15,23,42,.06), 0 4px 16px rgba(15,23,42,.04);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI","Microsoft YaHei UI",sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+    .hidden { display: none !important; }
+
+    .field { margin-bottom:16px; }
+    .field label { display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+    .field input, .field select, .field textarea {
+      width:100%; padding:11px 14px; border:1px solid var(--border); border-radius:10px; font-size:14px; background:#fff;
+    }
+    .field input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(74,156,237,.15); }
+
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      background:var(--primary); color:#fff; border:none; border-radius:10px;
+      padding:10px 18px; font-size:14px; font-weight:500; cursor:pointer;
+    }
+    .btn:hover { background:var(--primary-dark); }
+    .btn.block { width:100%; padding:12px; }
+    .btn.secondary { background:#fff; color:var(--text); border:1px solid var(--border); }
+    .btn.secondary:hover { background:#f8fafc; }
+    .btn.danger { background:var(--danger); }
+    .btn.small { padding:6px 12px; font-size:12px; border-radius:8px; }
+    .btn:disabled { opacity:.55; cursor:not-allowed; }
+    .btn-group { display:flex; gap:8px; flex-wrap:wrap; }
+
+    .panel { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); margin-bottom:20px; overflow:hidden; }
+    .panel-head { padding:18px 22px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .panel-head h2 { font-size:16px; font-weight:600; }
+    .panel-head p { font-size:12px; color:var(--muted); margin-top:2px; }
+    .panel-body { padding:22px; }
+
+    .tag { display:inline-flex; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600; }
+    .tag.ok { background:#d1fae5; color:#047857; }
+    .tag.used { background:#fef3c7; color:#b45309; }
+    .tag.role { background:#dbeafe; color:#1d4ed8; }
+    .tag.off { background:#fee2e2; color:#b91c1c; }
+    .empty { text-align:center; color:var(--muted); padding:40px 16px; }
+
+    #appView { display:flex; min-height:100vh; }
+    .sidebar { width:240px; background:var(--sidebar); color:var(--sidebar-text); flex-shrink:0; display:flex; flex-direction:column; position:sticky; top:0; height:100vh; }
+    .sidebar-brand { padding:22px 20px; border-bottom:1px solid rgba(255,255,255,.06); }
+    .logo { display:flex; align-items:center; gap:12px; }
+    .logo-icon { width:38px; height:38px; background:linear-gradient(135deg,var(--primary),#2563eb); border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:13px; }
+    .sidebar-brand h2 { font-size:15px; color:#f1f5f9; }
+    .sidebar-brand small { font-size:11px; color:#64748b; }
+    .nav-section { padding:16px 12px 4px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:#475569; }
+    .nav-item { display:flex; align-items:center; gap:10px; padding:10px 14px; margin:2px 8px; border-radius:10px; cursor:pointer; font-size:14px; color:var(--sidebar-text); }
+    .nav-item:hover { background:rgba(255,255,255,.06); color:#e2e8f0; }
+    .nav-item.active { background:var(--sidebar-active); color:var(--sidebar-active-text); font-weight:500; }
+    .sidebar-footer { margin-top:auto; padding:16px; border-top:1px solid rgba(255,255,255,.06); }
+    .user-card { display:flex; gap:10px; padding:10px; background:rgba(255,255,255,.04); border-radius:10px; margin-bottom:10px; }
+    .user-avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#4a9ced,#6366f1); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; }
+    .user-card .name { color:#f1f5f9; font-size:13px; }
+    .user-card .role { color:#64748b; font-size:11px; }
+
+    .main { flex:1; display:flex; flex-direction:column; min-width:0; }
+    .topbar { background:var(--card); border-bottom:1px solid var(--border); padding:0 24px; height:60px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10; }
+    .topbar-left h1 { font-size:18px; }
+    .topbar-left .desc { font-size:12px; color:var(--muted); }
+    .menu-toggle { display:none; }
+    .content { padding:24px 28px 40px; flex:1; }
+
+    .stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; margin-bottom:20px; }
+    .stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; box-shadow:var(--shadow); }
+    .stat-card .label { font-size:12px; color:var(--muted); }
+    .stat-card .value { font-size:28px; font-weight:700; margin:6px 0; }
+    .stat-card .hint { font-size:11px; color:var(--muted); }
+    .progress-bar { height:4px; background:#e2e8f0; border-radius:99px; margin-top:8px; overflow:hidden; }
+    .progress-bar span { display:block; height:100%; background:var(--primary); }
+
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; align-items:center; }
+    .toolbar input, .toolbar select { padding:9px 12px; border:1px solid var(--border); border-radius:8px; font-size:13px; }
+    .tabs-inline { display:flex; gap:6px; flex-wrap:wrap; }
+    .tabs-inline button { border:1px solid var(--border); background:#fff; color:var(--muted); padding:7px 12px; border-radius:999px; cursor:pointer; font-size:12px; }
+    .tabs-inline button.active { background:rgba(74,156,237,.12); border-color:rgba(74,156,237,.4); color:var(--primary-dark); }
+
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .cmd-grid { display:flex; flex-direction:column; gap:14px; }
+    .cmd-block label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+    .cmd-row { display:flex; gap:8px; align-items:flex-start; }
+    .cmd-box { flex:1; background:#0f172a; color:#e2e8f0; padding:12px; border-radius:10px; font-family:Consolas,monospace; font-size:12px; word-break:break-all; }
+    .api-key-input { width:100%; padding:11px 14px; border:1px solid var(--border); border-radius:10px; font-family:Consolas,monospace; font-size:13px; background:#fff; }
+    .api-key-row { display:flex; gap:8px; align-items:stretch; flex-wrap:wrap; }
+    .api-key-row .api-key-input { flex:1; min-width:200px; }
+    .api-key-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .api-doc-pre { background:#0f172a; color:#e2e8f0; border-radius:10px; padding:14px 16px; font-family:Consolas,monospace; font-size:12px; line-height:1.55; white-space:pre-wrap; word-break:break-all; margin:8px 0 0; position:relative; }
+    .api-endpoint-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:8px 0 16px; }
+    .api-endpoint-row code { background:#f1f5f9; padding:8px 12px; border-radius:8px; font-size:13px; flex:1; word-break:break-all; }
+    .api-alert { font-size:12px; padding:12px 14px; border-radius:8px; line-height:1.6; margin-top:14px; }
+    .api-alert.warn { background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+    .api-alert.info { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
+    .api-empty { text-align:center; padding:32px 16px; color:var(--muted); }
+    .copy-float { position:absolute; top:10px; right:10px; }
+    .cdk-batch-text {
+      width:100%; min-height:160px; max-height:320px; padding:12px 14px;
+      border:1px solid var(--border); border-radius:10px; background:#f8fafc;
+      font-family:Consolas,monospace; font-size:13px; line-height:1.65; color:var(--text);
+      resize:vertical; box-sizing:border-box;
+    }
+    .cdk-batch-text:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(74,156,237,.12); }
+    .cdk-game-search { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--border); }
+    .cdk-game-search input { flex:1; min-width:180px; max-width:360px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; }
+    .cdk-game-banner { background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:14px; line-height:1.5; }
+    .cdk-game-banner strong { color:#1e40af; }
+    .game-probe-box { margin-bottom:16px; padding:14px 16px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; }
+    .game-probe-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .game-probe-row input { flex:1; min-width:160px; max-width:240px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; }
+    .game-probe-result { margin-top:12px; padding:12px 14px; border-radius:10px; font-size:13px; line-height:1.55; display:none; }
+    .game-probe-result.show { display:block; }
+    .game-probe-result.ok { background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; }
+    .game-probe-result.warn { background:#fffbeb; border:1px solid #fde68a; color:#92400e; }
+    .game-probe-result.bad { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
+    .cdk-date-group { margin-bottom:12px; border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#fff; }
+    .cdk-date-head { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#f8fafc; cursor:pointer; user-select:none; font-weight:600; font-size:14px; }
+    .cdk-date-head:hover { background:#f1f5f9; }
+    .cdk-date-head .count { font-weight:400; color:var(--muted); font-size:13px; }
+    .cdk-date-head .arrow { color:var(--muted); font-size:12px; margin-left:8px; }
+    .cdk-date-body.collapsed { display:none; }
+
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
+    .game-card { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; background:#fff; }
+    .game-card img { width:100%; height:100px; object-fit:cover; display:block; background:#e2e8f0; }
+    .game-card .body { padding:12px; }
+    .game-card .title { font-weight:600; font-size:13px; min-height:36px; }
+    .game-card .appid { color:var(--muted); font-size:12px; margin:4px 0 10px; }
+    .game-card .actions { display:flex; gap:6px; }
+    .game-card .actions select { flex:1; padding:6px; border:1px solid var(--border); border-radius:8px; font-size:12px; }
+
+    .catalog-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; }
+    .catalog-card { border:1px solid var(--border); border-radius:10px; overflow:hidden; background:#fff; }
+    .catalog-cover { position:relative; height:84px; background:#e2e8f0; }
+    .catalog-cover img { width:100%; height:100%; object-fit:cover; }
+    .catalog-appid { position:absolute; top:6px; right:6px; background:rgba(15,23,42,.8); color:#fff; font-size:10px; padding:2px 6px; border-radius:6px; }
+    .catalog-body { padding:10px; }
+    .catalog-name { font-size:12px; font-weight:600; line-height:1.4; min-height:34px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .catalog-gen { margin-top:10px; }
+    .catalog-gen .gen-toggle { width:100%; padding:7px 8px; font-size:12px; }
+    .gen-panel { margin-top:8px; padding:10px; background:#f8fafc; border:1px solid var(--border); border-radius:8px; }
+    .gen-label { display:block; font-size:11px; color:var(--muted); margin-bottom:4px; }
+    .gen-panel select { width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:12px; margin-bottom:8px; }
+    .gen-panel-actions { display:flex; gap:6px; }
+    .gen-panel-actions .btn { flex:1; padding:7px 6px; font-size:11px; }
+    .gen-hint { font-size:10px; color:var(--muted); margin-top:8px; line-height:1.4; }
+    .gen-wizard { margin-top:10px; padding:14px; background:linear-gradient(180deg,#fff 0%,#f8fafc 100%); border:1px solid var(--border); border-radius:12px; }
+    .gen-stepper { display:flex; align-items:center; justify-content:center; margin-bottom:14px; }
+    .gen-step-dot { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; background:#e2e8f0; color:var(--muted); }
+    .gen-step-dot.active { background:var(--primary); color:#fff; }
+    .gen-step-dot.done { background:#dbeafe; color:#1d4ed8; }
+    .gen-step-line { width:28px; height:2px; background:#e2e8f0; }
+    .gen-step-line.done { background:#bfdbfe; }
+    .gen-step-title { font-size:13px; font-weight:600; margin-bottom:8px; }
+    .gen-step-desc { font-size:12px; color:var(--muted); margin-bottom:12px; line-height:1.5; }
+    .gen-qty-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:12px; }
+    .gen-qty-grid.gen-qty-quick { margin-top:10px; margin-bottom:0; }
+    .gen-qty-row { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+    .gen-qty-step {
+      width:40px; height:40px; border:1px solid var(--border); border-radius:8px;
+      background:#fff; font-size:20px; line-height:1; cursor:pointer;
+    }
+    .gen-qty-step:hover { border-color:var(--primary); color:#1d4ed8; }
+    .gen-qty-input {
+      flex:1; min-width:0; height:40px; padding:0 12px; border:1px solid var(--border);
+      border-radius:8px; font-size:16px; font-weight:600; text-align:center;
+    }
+    .gen-qty-input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(74,156,237,.12); }
+    .gen-qty-unit { font-size:13px; color:var(--muted); white-space:nowrap; }
+    .gen-qty-btn { padding:10px 6px; border:1px solid var(--border); border-radius:8px; background:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+    .gen-qty-btn.selected { border-color:var(--primary); background:#eff6ff; color:#1d4ed8; }
+    .gen-mode-cards { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+    .gen-mode-card { padding:12px; border:2px solid var(--border); border-radius:10px; background:#fff; cursor:pointer; text-align:left; }
+    .gen-mode-card.selected { border-color:var(--primary); background:#eff6ff; }
+    .gen-mode-card .mode-name { font-size:13px; font-weight:700; margin-bottom:4px; }
+    .gen-mode-card .mode-desc { font-size:11px; color:var(--muted); line-height:1.45; }
+    .gen-mode-card .mode-tag { display:inline-block; margin-top:8px; font-size:10px; padding:2px 8px; border-radius:999px; background:#f1f5f9; color:var(--muted); }
+    .gen-confirm-box { padding:12px; border-radius:10px; background:#fff; border:1px solid var(--border); margin-bottom:12px; }
+    .gen-confirm-row { display:flex; justify-content:space-between; padding:6px 0; font-size:12px; border-bottom:1px dashed #e2e8f0; }
+    .gen-confirm-row:last-child { border-bottom:none; }
+    .gen-account-box { margin-top:10px; padding:10px; border-radius:8px; background:#fffbeb; border:1px solid #fde68a; font-size:11px; color:#92400e; line-height:1.5; }
+    .gen-wizard-nav { display:flex; gap:8px; }
+    .gen-wizard-nav .btn { flex:1; }
+    .gen-toggle.open { background:#eff6ff; border-color:#93c5fd; color:#1d4ed8; }
+    .pre-badge { display:inline-flex; font-size:11px; font-weight:600; color:#92400e; background:#fef3c7; border:1px solid #fde68a; padding:4px 10px; border-radius:999px; margin-bottom:12px; }
+    .rc-type-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .rc-type-btn { padding:12px; border:2px solid var(--border); border-radius:10px; background:#fff; cursor:pointer; text-align:left; }
+    .rc-type-btn.selected { border-color:var(--primary); background:#eff6ff; }
+    .rc-type-btn .t-name { font-size:13px; font-weight:700; margin-bottom:2px; }
+    .rc-type-btn .t-desc { font-size:11px; color:var(--muted); }
+    .rc-presets { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; align-items:center; }
+    .rc-preset { padding:6px 12px; border:1px solid var(--border); border-radius:999px; background:#fff; font-size:12px; cursor:pointer; }
+    .rc-preset.active, .rc-preset:hover { border-color:var(--primary); color:#1d4ed8; background:#eff6ff; }
+    .rc-preset-custom { display:inline-flex; align-items:center; gap:6px; padding:4px 10px 4px 12px; border:1px solid var(--border); border-radius:999px; background:#fff; font-size:12px; }
+    .rc-preset-custom.active, .rc-preset-custom:focus-within { border-color:var(--primary); background:#eff6ff; }
+    .rc-preset-custom input { width:72px; border:none; background:transparent; font-size:12px; outline:none; color:#1d4ed8; }
+    .rc-preset-custom input::placeholder { color:var(--muted); }
+    .rc-hint { margin-top:12px; padding:12px; border-radius:10px; background:#f8fafc; border:1px dashed var(--border); font-size:12px; color:var(--muted); line-height:1.55; }
+    .rc-account-summary { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+    .rc-account-summary .mini { padding:12px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; }
+    .rc-account-summary .mini .label { font-size:11px; color:var(--muted); }
+    .rc-account-summary .mini .val { font-size:18px; font-weight:700; margin-top:4px; }
+    .search-results-wrap { margin-bottom:16px; }
+    .search-results-title { font-size:13px; color:var(--muted); margin-bottom:10px; }
+
+    .table-wrap { border:1px solid var(--border); border-radius:10px; overflow:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { padding:12px 14px; text-align:left; border-bottom:1px solid var(--border); }
+    th { background:#f8fafc; font-size:12px; color:var(--muted); }
+    .td-actions { display:flex; gap:6px; flex-wrap:wrap; }
+
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .form-grid .span2 { grid-column:span 2; }
+    .form-grid .actions { grid-column:span 2; }
+
+    .pager { display:flex; justify-content:center; gap:12px; margin-top:18px; align-items:center; }
+    .pager-info { color:var(--muted); font-size:13px; }
+
+    .modal { position:fixed; inset:0; background:rgba(15,23,42,.45); display:none; align-items:center; justify-content:center; z-index:100; padding:20px; }
+    .modal.show { display:flex; }
+    .modal-box { background:#fff; border-radius:14px; width:100%; max-width:520px; max-height:90vh; overflow:auto; box-shadow:0 20px 50px rgba(0,0,0,.2); }
+    .modal-head { padding:18px 22px; border-bottom:1px solid var(--border); }
+    .modal-body { padding:22px; }
+    .modal-foot { padding:16px 22px; border-top:1px solid var(--border); display:flex; gap:10px; justify-content:flex-end; }
+    .cdk-item { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); gap:10px; }
+
+    .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:#1e293b; color:#fff; padding:12px 20px; border-radius:999px; opacity:0; transition:.25s; z-index:200; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .toast.err { background:#991b1b; }
+    .toast.ok { background:#065f46; }
+    .global-loading { position:fixed; inset:0; background:rgba(255,255,255,.5); display:none; place-items:center; z-index:90; }
+    .global-loading.show { display:grid; }
+    .spinner { width:40px; height:40px; border:3px solid #e2e8f0; border-top-color:var(--primary); border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    @media (max-width:900px) {
+      .sidebar { position:fixed; left:-260px; z-index:50; transition:.2s; }
+      .sidebar.open { left:0; }
+      .menu-toggle { display:inline-flex; }
+      .two-col, .form-grid { grid-template-columns:1fr; }
+      .form-grid .span2, .form-grid .actions { grid-column:span 1; }
+    }
+  </style>
+</head>
+<body>
+  <div id="appView">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo">
+          <div class="logo-icon">AG</div>
+          <div><h2 id="siteName">代理工作台</h2><small>Agent Portal</small></div>
+        </div>
+      </div>
+      <div class="nav-section">概览</div>
+      <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">📊 仪表盘</div>
+      <div class="nav-section">CDK</div>
+      <div class="nav-item" data-page="cdk" onclick="showPage('cdk')">🔑 CDK 管理</div>
+      <div class="nav-item" data-page="logs" onclick="showPage('logs')">📋 激活记录</div>
+      <div class="nav-item" data-page="games" onclick="showPage('games')">🎮 游戏与 CDK</div>
+      <div class="nav-section">团队</div>
+      <div class="nav-item" data-page="subagents" onclick="showPage('subagents')">👥 下级代理</div>
+      <div class="nav-item" data-page="wallet" onclick="showPage('wallet')">💰 我的钱包</div>
+      <div class="nav-item" data-page="recharge" onclick="showPage('recharge')">💳 账户充值</div>
+      <div class="nav-item" data-page="withdraw" onclick="showPage('withdraw')">💸 余额提现</div>
+      <div class="nav-section">账户</div>
+      <div class="nav-item" data-page="settings" onclick="showPage('settings')">⚙️ 账户设置</div>
+      <div class="sidebar-footer">
+        <div class="user-card">
+          <div class="user-avatar" id="userAvatar">A</div>
+          <div><div class="name" id="sidebarUser">-</div><div class="role" id="sidebarRole">-</div></div>
+        </div>
+        <button class="btn secondary small block" onclick="doLogout()">退出登录</button>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn secondary small menu-toggle" onclick="toggleSidebar()">☰</button>
+          <h1 id="pageTitle">仪表盘</h1>
+          <div class="desc" id="pageDesc">数据概览</div>
+        </div>
+        <div class="btn-group">
+          <button class="btn secondary small" onclick="refreshPage()">刷新</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section id="page-dashboard">
+          <div id="announcementBar" class="hidden" style="margin-bottom:14px;padding:12px 16px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;font-size:13px;line-height:1.5"></div>
+          <div class="stat-grid">
+            <div class="stat-card"><div class="label">CDK 总数</div><div class="value" id="dTotal">-</div></div>
+            <div class="stat-card"><div class="label">未使用</div><div class="value" id="dUnused">-</div></div>
+            <div class="stat-card"><div class="label">已使用</div><div class="value" id="dUsed">-</div></div>
+            <div class="stat-card"><div class="label">今日激活</div><div class="value" id="dToday">-</div></div>
+            <div class="stat-card"><div class="label">预生成额度</div><div class="value" id="dQuota">-</div><div class="progress-bar"><span id="quotaBar" style="width:0%"></span></div></div>
+            <div class="stat-card"><div class="label">余额</div><div class="value" id="dBalance">-</div><div class="hint" id="dCostHint">-</div></div>
+            <div class="stat-card"><div class="label">下级代理</div><div class="value" id="dSubAgents">-</div></div>
+          </div>
+          <div class="two-col">
+            <div class="panel">
+              <div class="panel-head"><div><h2>客户激活命令</h2><p>复制后发给客户</p></div></div>
+              <div class="panel-body">
+                <div class="cmd-grid">
+                  <div class="cmd-block"><label>标准激活</label><div class="cmd-row"><div class="cmd-box" id="cmdInstall">irm __PUBLIC_URL__ | iex</div><button class="btn secondary small" onclick="copyText(document.getElementById('cmdInstall').textContent)">复制</button></div></div>
+                  <div class="cmd-block"><label>预填 CDK</label><div class="cmd-row"><div class="cmd-box" id="cmdCdk">$cdk="XXXX"; irm __PUBLIC_URL__ | iex</div><button class="btn secondary small" onclick="copyText(document.getElementById('cmdCdk').textContent)">复制</button></div></div>
+                </div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><div><h2>最近激活</h2></div><button class="btn secondary small" onclick="showPage('logs')">全部</button></div>
+              <div class="panel-body" style="padding:0">
+                <div class="table-wrap" style="border:none"><table><thead><tr><th>游戏</th><th>CDK</th><th>时间</th></tr></thead><tbody id="recentLogs"></tbody></table></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-cdk" class="hidden">
+          <div class="panel">
+            <div class="panel-head"><div><h2>CDK 管理</h2><p id="cdkListCount">0 条</p></div><button class="btn secondary small" onclick="exportUnused()">导出未使用</button></div>
+            <div class="panel-body">
+              <div class="cdk-game-search">
+                <input id="cdkGameSearch" placeholder="AppID 或游戏名称，按生成日期分组查看" onkeydown="if(event.key==='Enter')searchCdkByGame()" />
+                <button class="btn" type="button" onclick="searchCdkByGame()">按游戏查询</button>
+                <button class="btn secondary small hidden" type="button" id="cdkGameClearBtn" onclick="clearCdkGameSearch()">返回全部列表</button>
+              </div>
+              <div class="toolbar" style="margin-bottom:12px">
+                <div class="tabs-inline" id="cdkFilterTabs">
+                  <button class="active" type="button" onclick="setCdkFilter('all')">全部</button>
+                  <button type="button" onclick="setCdkFilter('unused')">未使用</button>
+                  <button type="button" onclick="setCdkFilter('used')">已使用</button>
+                </div>
+              </div>
+              <div id="cdkGameBanner" class="cdk-game-banner hidden"></div>
+              <div id="cdkGameGrouped" class="hidden"></div>
+              <div id="cdkFlatBlock">
+                <div class="toolbar">
+                  <input id="cdkSearch" placeholder="搜索 CDK / 游戏" oninput="renderCdkTable()" />
+                </div>
+                <div class="table-wrap"><table><thead><tr><th>CDK</th><th>游戏</th><th>AppID</th><th>状态</th><th>计费</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="cdkTable"></tbody></table></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-logs" class="hidden">
+          <div class="panel">
+            <div class="panel-head"><div><h2>激活记录</h2></div></div>
+            <div class="panel-body">
+              <div class="toolbar"><input id="logSearch" placeholder="搜索" oninput="renderLogsTable()" /></div>
+              <div class="table-wrap"><table><thead><tr><th>CDK</th><th>游戏</th><th>AppID</th><th>时间</th><th>机器</th></tr></thead><tbody id="logsTable"></tbody></table></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-games" class="hidden">
+          <div class="panel">
+            <div class="panel-head"><div><h2>游戏与 CDK</h2><p id="gamesStatus">默认只显示可入库游戏，无清单的游戏不能生成 CDK</p></div></div>
+            <div class="panel-body">
+              <div class="game-probe-box">
+                <div style="font-weight:600;margin-bottom:8px">入库检测</div>
+                <p style="font-size:12px;color:var(--muted);margin:0 0 10px">输入 AppID，检测是否有完整 depot、密钥是否覆盖、能否生成 CDK（约需几秒）</p>
+                <div class="game-probe-row">
+                  <input id="gameProbeAppid" placeholder="AppID，例如 730" inputmode="numeric" />
+                  <button class="btn" type="button" onclick="probeGameDepot()">入库检测</button>
+                  <button class="btn secondary" type="button" onclick="enrichGameMeta()">补齐名称封面</button>
+                </div>
+                <p style="font-size:11px;color:var(--muted);margin:8px 0 0">「补齐名称封面」从 Steam 拉取<strong>中文名 / 英文名</strong>与头图，并写入本系统游戏库</p>
+                <div id="gameProbeResult" class="game-probe-result"></div>
+              </div>
+              <div class="toolbar">
+                <input id="gameSearch" placeholder="名称/AppID 搜索（有清单即可搜到并入库）" style="flex:1;max-width:280px" />
+                <button class="btn" onclick="gameSearch()">搜索</button>
+                <input id="searchInput" placeholder="Steam 快速搜索" style="flex:1;max-width:200px" />
+                <button class="btn secondary" onclick="doSearch()">Steam 搜索</button>
+                <div class="tabs-inline" id="manifestFilterTabs">
+                  <button data-manifest="all" onclick="setManifestFilter('all')">全库参考</button>
+                  <button class="active" data-manifest="has_manifest" onclick="setManifestFilter('has_manifest')">可入库</button>
+                  <button data-manifest="no_manifest" onclick="setManifestFilter('no_manifest')">无清单</button>
+                </div>
+                <div class="tabs-inline" id="gameFilterTabs">
+                  <button class="active" data-filter="all" onclick="setGameFilter('all')">全部</button>
+                  <button data-filter="installed" onclick="setGameFilter('installed')">已入库</button>
+                  <button data-filter="not_installed" onclick="setGameFilter('not_installed')">未入库</button>
+                </div>
+              </div>
+              <div id="searchResultsWrap" class="search-results-wrap hidden">
+                <div class="search-results-title">Steam 搜索结果</div>
+                <div id="searchResults" class="catalog-grid"></div>
+              </div>
+              <div id="gamesGrid" class="catalog-grid"><div class="empty">加载中…</div></div>
+              <div class="pager" id="gamesPager"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-subagents" class="hidden">
+          <div class="panel">
+            <div class="panel-head"><div><h2>我的邀请链接</h2><p>分享给他人注册，将自动成为您的下级代理</p></div></div>
+            <div class="panel-body">
+              <div class="field"><label>邀请码</label>
+                <div style="display:flex;gap:8px">
+                  <input id="myInviteCode" readonly style="background:#f8fafc;font-weight:700;letter-spacing:1px;flex:1" />
+                  <button class="btn secondary" onclick="copyText(document.getElementById('myInviteCode').value)">复制</button>
+                </div>
+              </div>
+              <div class="field"><label>注册链接</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <input id="myInviteUrl" readonly style="background:#f8fafc;flex:1;min-width:200px;font-size:12px" />
+                  <button class="btn secondary" onclick="copyText(document.getElementById('myInviteUrl').value)">复制链接</button>
+                  <button class="btn secondary" onclick="refreshInviteCode()">重新生成</button>
+                </div>
+              </div>
+              <div class="field">
+                <label>邀请注册成本价（CDK 单价）</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                  <input id="inviteCostPrice" type="number" step="0.01" style="flex:1;min-width:120px" />
+                  <button class="btn" onclick="saveInviteCost()">保存</button>
+                </div>
+                <p style="font-size:11px;color:var(--muted);margin-top:6px" id="inviteCostHint">通过邀请链接注册的下级将使用此成本价</p>
+              </div>
+              <p style="font-size:12px;color:var(--muted);line-height:1.55">他人必须通过此链接注册并绑定为您的下级。成本价在注册时生效，无需注册后再改价。重新生成邀请码后旧链接失效。</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>邀请下级代理</h2><p id="subAgentHint">给下级设置更高 CDK 成本价，差价即为您的利润</p></div></div>
+            <div class="panel-body">
+              <div class="form-grid">
+                <div class="field"><label>用户名</label><input id="subUser" placeholder="至少 3 位" /></div>
+                <div class="field"><label>密码</label><input id="subPass" type="password" placeholder="至少 6 位" /></div>
+                <div class="field"><label>显示名称</label><input id="subName" /></div>
+                <div class="field"><label>下级 CDK 成本单价</label><input id="subPrice" type="number" step="0.01" /></div>
+                <input id="subQuota" type="hidden" value="0" />
+                <div class="field span2"><label>备注</label><input id="subNote" /></div>
+                <div class="actions"><button class="btn" onclick="createSubAgent()">邀请下级</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>我的下级</h2></div></div>
+            <div class="panel-body" style="padding:0">
+              <div class="table-wrap" style="border:none"><table><thead><tr><th>用户名</th><th>名称</th><th>成本价</th><th>余额</th><th>已生成</th><th>状态</th><th>操作</th></tr></thead><tbody id="subAgentsTable"></tbody></table></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-wallet" class="hidden">
+          <div class="stat-grid">
+            <div class="stat-card"><div class="label">账户余额</div><div class="value" id="wBalance">-</div></div>
+            <div class="stat-card"><div class="label">可提现分润</div><div class="value" id="wWithdrawable">-</div></div>
+            <div class="stat-card"><div class="label">我的成本价</div><div class="value" id="wCost">-</div></div>
+            <div class="stat-card"><div class="label">下级人数</div><div class="value" id="wSubCount">-</div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>分润记录</h2></div></div>
+            <div class="panel-body" style="padding:0">
+              <div class="table-wrap" style="border:none"><table><thead><tr><th>时间</th><th>来源下级</th><th>数量</th><th>单价差</th><th>入账</th></tr></thead><tbody id="walletLogs"></tbody></table></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-recharge" class="hidden">
+          <div class="rc-account-summary">
+            <div class="mini"><div class="label">当前余额</div><div class="val" id="rcBal">-</div></div>
+            <div class="mini"><div class="label">预生成额度</div><div class="val" id="rcQuota">-</div></div>
+            <div class="mini"><div class="label">待激活预生成</div><div class="val" id="rcPending">-</div></div>
+          </div>
+          <div class="two-col">
+            <div class="panel">
+              <div class="panel-head"><div><h2>余额充值</h2><p>支付宝在线支付，成功后自动到账</p></div></div>
+              <div class="panel-body">
+                <span class="pre-badge" id="rcOnlineBadge" style="background:#ecfdf5;color:#047857;border-color:#a7f3d0">在线支付 · 支付成功后自动到账</span>
+                <div class="field"><label>充值账号</label><input id="rcUserDisplay" readonly style="background:#f8fafc" /></div>
+                <div class="field">
+                  <label>充值金额（元）</label>
+                  <div class="rc-presets" id="rcPresets"></div>
+                  <input id="rcAmount" type="hidden" value="" />
+                </div>
+                <div class="rc-hint hidden" id="rcDisabledHint">在线支付暂未开启，请联系管理员在后台配置 GoPay。</div>
+                <button class="btn" id="rcSubmitBtn" onclick="submitSelfRecharge()">立即支付</button>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><div><h2>充值记录</h2><p>最近 50 条在线支付订单</p></div></div>
+              <div class="panel-body" style="padding:0">
+                <div class="table-wrap" style="border:none">
+                  <table><thead><tr><th>时间</th><th>金额</th><th>状态</th><th>说明</th></tr></thead><tbody id="rcHistoryTable"></tbody></table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-withdraw" class="hidden">
+          <div class="panel">
+            <div class="panel-head"><div><h2>余额提现</h2><p>仅分润余额可提现；充值余额只能购买 CDK 或给下级充值</p></div></div>
+            <div class="panel-body">
+              <div class="field"><label>账户余额</label><input id="wdBalDisplay" readonly style="background:#f8fafc" /></div>
+              <div class="field"><label>可提现分润</label><input id="wdProfitDisplay" readonly style="background:#f8fafc" /></div>
+              <p id="wdMinHint" style="font-size:12px;color:var(--muted);margin:-4px 0 12px">分润余额满 500 元才可以提现</p>
+              <div class="field"><label>提现金额</label><input id="wdAmount" type="number" step="0.01" min="500" placeholder="最低 500 元" /></div>
+              <div class="field"><label>收款信息</label><input id="wdPayout" placeholder="支付宝/微信/银行卡等" /></div>
+              <div class="field"><label>备注</label><input id="wdNote" placeholder="可选" /></div>
+              <button class="btn" id="wdSubmitBtn" onclick="submitWithdraw()">提交提现申请</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>提现记录</h2></div></div>
+            <div class="panel-body" style="padding:0">
+              <div class="table-wrap" style="border:none"><table><thead><tr><th>时间</th><th>金额</th><th>状态</th><th>收款信息</th><th>审核说明</th></tr></thead><tbody id="wdHistoryTable"></tbody></table></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-settings" class="hidden">
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-head"><div><h2>个人设置</h2><p>管理个人账户和 API 配置</p></div></div>
+            <div class="panel-body two-col">
+              <div>
+                <h3 style="font-size:15px;margin-bottom:12px">修改密码</h3>
+                <div class="field"><label>原密码</label><input id="oldPass" type="password" /></div>
+                <div class="field"><label>新密码</label><input id="newPass2" type="password" /></div>
+                <div class="field"><label>确认新密码</label><input id="newPass3" type="password" /></div>
+                <button class="btn" onclick="changePassword()">保存</button>
+              </div>
+              <div>
+                <h3 style="font-size:15px;margin-bottom:12px">账号信息</h3>
+                <div class="field"><label>用户名</label><input id="setUser" readonly style="background:#f8fafc" /></div>
+                <div class="field"><label>成本价</label><input id="setCost" readonly style="background:#f8fafc" /></div>
+                <div class="field"><label>显示名称</label><input id="setName" readonly style="background:#f8fafc" /></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-head"><div><h2>API 密钥管理</h2><p>用于第三方开发者接口调用的密钥</p></div></div>
+            <div class="panel-body" id="apiKeySection">
+              <div id="apiKeyLoading" class="api-empty">加载中…</div>
+              <div id="apiKeyExists" class="hidden">
+                <label class="field" style="display:block;font-size:13px;color:var(--muted);margin-bottom:6px">当前 API 密钥</label>
+                <div class="api-key-row">
+                  <input id="apiKeyInput" class="api-key-input" type="password" readonly />
+                  <button class="btn secondary small" type="button" id="apiKeyToggleBtn" onclick="toggleApiKeyVisible()">显示</button>
+                </div>
+                <div class="api-key-actions">
+                  <button class="btn small" type="button" onclick="copyApiKey()">复制密钥</button>
+                  <button class="btn secondary small" type="button" onclick="confirmRegenerateApiKey()">重新生成</button>
+                  <button class="btn danger small" type="button" onclick="confirmClearApiKey()">清除密钥</button>
+                </div>
+                <div class="api-alert warn">
+                  <p style="margin:0 0 6px">• 请妥善保管您的 API 密钥，不要在公共场所或代码中暴露</p>
+                  <p style="margin:0 0 6px">• 重新生成密钥后，旧密钥将立即失效</p>
+                  <p style="margin:0">• 建议定期更换 API 密钥以确保安全</p>
+                </div>
+              </div>
+              <div id="apiKeyEmpty" class="hidden api-empty">
+                <p style="margin-bottom:16px">您还没有 API 密钥</p>
+                <button class="btn" type="button" onclick="generateApiKey()">开通 API 密钥</button>
+                <div class="api-alert info" style="margin-top:20px;text-align:left">
+                  <p style="margin:0 0 8px"><strong>什么是 API 密钥？</strong></p>
+                  <p style="margin:0 0 6px">API 密钥是用于第三方开发者接口调用的认证凭证。通过 API 密钥，您可以：</p>
+                  <ul style="margin:0;padding-left:18px">
+                    <li>自动化生成激活码</li>
+                    <li>查询激活码状态</li>
+                    <li>集成到您的应用程序中</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel hidden" id="apiDocsPanel">
+            <div class="panel-head"><div><h2>API 使用文档</h2><p>与 steamfn 相同：在 JSON 请求体中传递 api_key</p></div></div>
+            <div class="panel-body">
+              <h4 style="font-size:14px;margin-bottom:8px">接口地址</h4>
+              <div class="api-endpoint-row">
+                <code id="apiGenerateEndpoint">POST …/api2/cdkeys/generate</code>
+                <button class="btn secondary small" type="button" onclick="copyApiEndpoint()">复制</button>
+              </div>
+              <h4 style="font-size:14px;margin-bottom:8px">请求示例</h4>
+              <div style="position:relative">
+                <pre class="api-doc-pre" id="apiCurlExample"></pre>
+                <button class="btn secondary small copy-float" type="button" onclick="copyApiCurlExample()">复制</button>
+              </div>
+              <p style="font-size:12px;color:var(--muted);margin-top:14px">
+                参数说明：<code>appid</code> 游戏 ID；<code>quantity</code> 数量 1–100；
+                <code>generation_mode</code> 0=即时扣费，1=激活后扣费；<code>notes</code> 备注。
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="genCdkModal" onclick="if(event.target===this)closeGenModal()">
+    <div class="modal-box" style="max-width:520px">
+      <div class="modal-head">
+        <h3 id="genModalTitle">生成卡密</h3>
+        <p id="genModalSub" style="color:var(--muted);font-size:13px;margin-top:4px"></p>
+      </div>
+      <div class="modal-body" id="genModalWizardWrap"></div>
+      <div class="modal-foot">
+        <button class="btn secondary" onclick="closeGenModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="cdkModal" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box">
+      <div class="modal-head"><h3 id="modalTitle">CDK 已生成</h3><p id="modalSub" style="color:var(--muted);font-size:13px;margin-top:4px"></p></div>
+      <div class="modal-body">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px">卡密列表（每行一个，可直接全选复制）</label>
+        <textarea id="modalCdksText" class="cdk-batch-text" readonly></textarea>
+      </div>
+      <div class="modal-foot">
+        <button class="btn secondary" onclick="closeModal()">关闭</button>
+        <button class="btn" onclick="copyAllCdks()">复制全部</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="editSubModal" onclick="if(event.target===this)closeEditSub()">
+    <div class="modal-box">
+      <div class="modal-head"><h3>编辑下级</h3></div>
+      <div class="modal-body">
+        <input type="hidden" id="editSubId" />
+        <div class="field"><label>显示名称</label><input id="editSubName" /></div>
+        <div class="field"><label>CDK 成本单价</label><input id="editSubPrice" type="number" step="0.01" /></div>
+        <input id="editSubQuota" type="hidden" value="0" />
+        <div class="field"><label>新密码（留空不改）</label><input id="editSubPass" type="password" /></div>
+        <div class="field"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="editSubEnabled" /> 启用</label></div>
+      </div>
+      <div class="modal-foot"><button class="btn secondary" onclick="closeEditSub()">取消</button><button class="btn" onclick="saveEditSub()">保存</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="rechargeModal" onclick="if(event.target===this)closeRechargeModal()">
+    <div class="modal-box" style="max-width:420px">
+      <div class="modal-head"><h3>下级充值</h3><p id="rechargeSub" style="color:var(--muted);font-size:13px;margin-top:4px"></p></div>
+      <div class="modal-body">
+        <p id="rechargeHint" style="font-size:12px;color:#92400e;background:#fffbeb;border:1px solid #fde68a;padding:10px;border-radius:8px;margin-bottom:14px;line-height:1.5">给下级充余额将从<strong>您的余额</strong>中扣除同等金额。</p>
+        <div class="field"><label>增加余额</label><input id="rechargeBalance" type="number" step="0.01" min="0" placeholder="0 表示不增加" /></div>
+        <input id="rechargeQuota" type="hidden" value="0" />
+        <div class="field"><label>备注</label><input id="rechargeNote" placeholder="可选" /></div>
+      </div>
+      <div class="modal-foot"><button class="btn secondary" onclick="closeRechargeModal()">取消</button><button class="btn" onclick="submitRecharge()">确认充值</button></div>
+    </div>
+  </div>
+
+  <div class="modal" id="confirmModal" onclick="if(event.target===this)closeConfirm(false)">
+    <div class="modal-box" style="max-width:400px">
+      <div class="modal-head"><h3 id="confirmTitle">确认</h3></div>
+      <div class="modal-body"><p id="confirmMsg"></p></div>
+      <div class="modal-foot"><button class="btn secondary" onclick="closeConfirm(false)">取消</button><button class="btn danger" onclick="closeConfirm(true)">确认</button></div>
+    </div>
+  </div>
+
+  <div class="global-loading" id="globalLoading"><div class="spinner"></div></div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const PUBLIC_URL = "__PUBLIC_URL__".replace(/\/$/, "");
+    const TOKEN_KEY = "portal_token";
+    let token = localStorage.getItem(TOKEN_KEY) || "";
+    let currentUser = null;
+    let currentPage = "dashboard";
+    let loadingCount = 0;
+    let lastGeneratedCdks = [];
+    let allCdkItems = [];
+    let cdkGameMode = false;
+    let cdkGameItems = [];
+    let cdkGameMeta = {};
+    let allLogItems = [];
+    let cdkFilter = "all";
+    let subAgentCache = {};
+    let confirmCallback = null;
+    let gamesPage = 1;
+    let gamesTotalPages = 1;
+    let gameFilter = "all";
+    let manifestFilter = "has_manifest";
+    let searchGamesItems = [];
+    let genWizardState = {};
+    const GEN_MODAL_KEY = "modal";
+    let rechargeTargetId = "";
+
+    const PAGE_META = {
+      dashboard: ["仪表盘", "数据概览与快捷操作"],
+      cdk: ["CDK 管理", "查看与管理 CDK"],
+      logs: ["激活记录", "已兑换 CDK 历史"],
+      games: ["游戏与 CDK", "浏览游戏并生成卡密"],
+      subagents: ["下级代理", "邀请与管理下级"],
+      wallet: ["我的钱包", "余额与分润"],
+      recharge: ["账户充值", "在线支付充值余额并查看记录"],
+      withdraw: ["余额提现", "申请提现并查看审核进度"],
+      settings: ["账户设置", "密码与 API 密钥"],
+    };
+    let apiKeyValue = "";
+    let apiKeyVisible = false;
+    let paymentOnlineEnabled = false;
+    const RC_PRESETS = [50, 100, 200, 500];
+
+    function setLoading(on) { loadingCount += on ? 1 : -1; if (loadingCount < 0) loadingCount = 0; document.getElementById("globalLoading").classList.toggle("show", loadingCount > 0); }
+    function toast(msg, type) { const el = document.getElementById("toast"); el.textContent = msg; el.className = "toast show" + (type === "err" ? " err" : type === "ok" ? " ok" : ""); setTimeout(() => el.classList.remove("show"), 2800); }
+    function copyText(text) { navigator.clipboard.writeText(text).then(() => toast("已复制", "ok")); }
+    function cdkInstallCmd(code) { return `$cdk="${code}"; irm ${PUBLIC_URL} | iex`; }
+    function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;"); }
+    function escAttr(s) { return String(s).replace(/'/g, "\\'"); }
+
+    function genWizardHtml(appid, name, panelKey) {
+      return `
+        <div class="gen-wizard" id="genPanel-${panelKey}" data-appid="${appid}" data-name="${escAttr(name)}">
+          <div class="gen-stepper" id="genStepper-${panelKey}">
+            <span class="gen-step-dot active" data-step="1">1</span><span class="gen-step-line"></span>
+            <span class="gen-step-dot" data-step="2">2</span><span class="gen-step-line"></span>
+            <span class="gen-step-dot" data-step="3">3</span>
+          </div>
+          <div class="gen-step" id="genStep1-${panelKey}">
+            <div class="gen-step-title">① 选择数量</div>
+            <div class="gen-step-desc">输入数量或使用快捷按钮，支持 1～100 张</div>
+            <div class="gen-qty-row">
+              <button type="button" class="gen-qty-step" onclick="genWizardAdjustQty('${panelKey}', -1)">−</button>
+              <input type="number" id="genQtyInput-${panelKey}" class="gen-qty-input" min="1" max="100" value="1"
+                oninput="genWizardPickQty('${panelKey}', this.value)" />
+              <button type="button" class="gen-qty-step" onclick="genWizardAdjustQty('${panelKey}', 1)">+</button>
+              <span class="gen-qty-unit">张</span>
+            </div>
+            <div class="gen-qty-grid gen-qty-quick" id="genQtyQuick-${panelKey}">
+              ${[1, 5, 10, 20, 50].map(n => `<button type="button" class="gen-qty-btn${n === 1 ? " selected" : ""}" data-qty="${n}" onclick="genWizardPickQty('${panelKey}', ${n})">${n}</button>`).join("")}
+            </div>
+            <div class="gen-wizard-nav"><button type="button" class="btn" onclick="genWizardGo('${panelKey}', 2)">下一步</button></div>
+          </div>
+          <div class="gen-step hidden" id="genStep2-${panelKey}">
+            <div class="gen-step-title">② 选择模式</div>
+            <div class="gen-step-desc">普通生成立即扣余额；预生成按当前余额可买数量的 10 倍控制上限，激活后再扣余额</div>
+            <div class="gen-mode-cards">
+              <div class="gen-mode-card" id="genModeImmediate-${panelKey}" onclick="genWizardPickMode('${panelKey}', 'immediate')">
+                <div class="mode-name">普通生成</div><div class="mode-desc">适合已付款客户，生成时立即扣余额</div><span class="mode-tag">即时扣费</span>
+              </div>
+              <div class="gen-mode-card" id="genModePre-${panelKey}" onclick="genWizardPickMode('${panelKey}', 'on_activate')">
+                <div class="mode-name">预生成</div><div class="mode-desc">先发卡密，客户激活成功后再扣余额</div><span class="mode-tag">激活后扣费</span>
+              </div>
+            </div>
+            <div class="gen-wizard-nav">
+              <button type="button" class="btn secondary" onclick="genWizardGo('${panelKey}', 1)">上一步</button>
+              <button type="button" class="btn" id="genModeNext-${panelKey}" disabled onclick="genWizardGo('${panelKey}', 3)">下一步</button>
+            </div>
+          </div>
+          <div class="gen-step hidden" id="genStep3-${panelKey}">
+            <div class="gen-step-title">③ 确认生成</div>
+            <div class="gen-confirm-box" id="genConfirm-${panelKey}"></div>
+            <div class="gen-wizard-nav">
+              <button type="button" class="btn secondary" onclick="genWizardGo('${panelKey}', 2)">上一步</button>
+              <button type="button" class="btn" onclick="genWizardSubmit('${panelKey}')">确认生成</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function genPanelHtml(appid, name, panelKey, hasManifest) {
+      if (hasManifest === false) {
+        return `<div class="catalog-gen"><span style="display:block;margin-top:10px;padding:8px;font-size:11px;color:var(--muted);background:#f8fafc;border:1px dashed var(--border);border-radius:8px;text-align:center">暂无清单，无法入库，不能生成 CDK</span></div>`;
+      }
+      return `<div class="catalog-gen">
+        <button type="button" class="btn" onclick="openGenModal('${appid}', '${escAttr(name)}')">生成卡密</button>
+      </div>`;
+    }
+
+    function openGenModal(appid, name) {
+      const unitPrice = currentUser?.cdk_cost_price || 0;
+      const pending = currentUser?.cdk_pending || 0;
+      if (currentUser?.role === "agent" && unitPrice > 0 && agentAvailableBalance() < unitPrice * (1 + pending)) {
+        toast("余额不足，无法生成卡密，请先充值", "err");
+        showPage("recharge");
+        return;
+      }
+      const title = name || ("AppID " + appid);
+      document.getElementById("genModalTitle").textContent = "生成卡密";
+      document.getElementById("genModalSub").textContent = title + " · AppID " + appid;
+      document.getElementById("genModalWizardWrap").innerHTML = genWizardHtml(appid, name, GEN_MODAL_KEY);
+      resetGenWizard(GEN_MODAL_KEY, appid, name);
+      document.getElementById("genCdkModal").classList.add("show");
+    }
+
+    function closeGenModal() {
+      document.getElementById("genCdkModal")?.classList.remove("show");
+      const wrap = document.getElementById("genModalWizardWrap");
+      if (wrap) wrap.innerHTML = "";
+    }
+
+    function resetGenWizard(panelKey, appid, name) {
+      genWizardState[panelKey] = { appid, name, step: 1, count: 1, mode: "" };
+      genWizardGo(panelKey, 1, true);
+      document.getElementById("genModeImmediate-" + panelKey)?.classList.remove("selected");
+      document.getElementById("genModePre-" + panelKey)?.classList.remove("selected");
+      const nextBtn = document.getElementById("genModeNext-" + panelKey);
+      if (nextBtn) nextBtn.disabled = true;
+      document.querySelectorAll("#genQtyQuick-" + panelKey + " .gen-qty-btn").forEach(btn => {
+        btn.classList.toggle("selected", btn.dataset.qty === "1");
+      });
+      const qtyInput = document.getElementById("genQtyInput-" + panelKey);
+      if (qtyInput) qtyInput.value = "1";
+    }
+
+    function genWizardClampQty(qty) {
+      let n = parseInt(String(qty), 10);
+      if (!Number.isFinite(n) || n < 1) n = 1;
+      if (n > 100) n = 100;
+      return n;
+    }
+
+    function genWizardPickQty(panelKey, qty) {
+      qty = genWizardClampQty(qty);
+      const st = genWizardState[panelKey] || {};
+      st.count = qty;
+      genWizardState[panelKey] = st;
+      const input = document.getElementById("genQtyInput-" + panelKey);
+      if (input && input.value !== String(qty)) input.value = String(qty);
+      document.querySelectorAll("#genQtyQuick-" + panelKey + " .gen-qty-btn").forEach(btn => {
+        btn.classList.toggle("selected", parseInt(btn.dataset.qty, 10) === qty);
+      });
+    }
+
+    function genWizardAdjustQty(panelKey, delta) {
+      const input = document.getElementById("genQtyInput-" + panelKey);
+      const current = genWizardClampQty(input?.value || genWizardState[panelKey]?.count || 1);
+      genWizardPickQty(panelKey, current + delta);
+    }
+
+    function genWizardReadQty(panelKey) {
+      const input = document.getElementById("genQtyInput-" + panelKey);
+      const qty = genWizardClampQty(input?.value || genWizardState[panelKey]?.count || 1);
+      genWizardPickQty(panelKey, qty);
+      return qty;
+    }
+
+    function genWizardPickMode(panelKey, mode) {
+      const st = genWizardState[panelKey] || {};
+      st.mode = mode;
+      genWizardState[panelKey] = st;
+      document.getElementById("genModeImmediate-" + panelKey)?.classList.toggle("selected", mode === "immediate");
+      document.getElementById("genModePre-" + panelKey)?.classList.toggle("selected", mode === "on_activate");
+      const nextBtn = document.getElementById("genModeNext-" + panelKey);
+      if (nextBtn) nextBtn.disabled = false;
+    }
+
+    function genWizardUpdateStepper(panelKey, step) {
+      const stepper = document.getElementById("genStepper-" + panelKey);
+      if (!stepper) return;
+      stepper.querySelectorAll(".gen-step-dot").forEach(dot => {
+        const n = parseInt(dot.dataset.step, 10);
+        dot.classList.toggle("active", n === step);
+        dot.classList.toggle("done", n < step);
+      });
+      stepper.querySelectorAll(".gen-step-line").forEach((line, i) => line.classList.toggle("done", i + 1 < step));
+    }
+
+    function agentAvailableBalance() {
+      if (!currentUser || currentUser.role !== "agent") return 0;
+      if (currentUser.available_balance != null) return currentUser.available_balance;
+      return Math.max(0, (currentUser.balance || 0) - (currentUser.pending_withdraw || 0));
+    }
+
+    function agentWithdrawableBalance() {
+      if (!currentUser || currentUser.role !== "agent") return 0;
+      if (currentUser.available_withdrawable_balance != null) return currentUser.available_withdrawable_balance;
+      const withdrawable = currentUser.withdrawable_balance || 0;
+      return Math.max(0, withdrawable - (currentUser.pending_withdraw || 0));
+    }
+
+    function agentGenCost(count, mode) {
+      const price = currentUser?.cdk_cost_price || 0;
+      return Math.round(price * (count || 1) * 10000) / 10000;
+    }
+
+    function agentPreGenerateLimit() {
+      if (!currentUser || currentUser.role !== "agent") return Infinity;
+      const price = currentUser?.cdk_cost_price || 0;
+      if (price <= 0) return Infinity;
+      return Math.floor(agentAvailableBalance() / price) * 10;
+    }
+
+    function agentBalanceEnough(count, mode) {
+      if (!currentUser || currentUser.role !== "agent") return true;
+      if (mode === "on_activate") return ((currentUser?.cdk_pending || 0) + (count || 1)) <= agentPreGenerateLimit();
+      const cost = agentGenCost(count, mode);
+      if (cost <= 0) return true;
+      return (agentAvailableBalance() >= cost);
+    }
+
+    function agentQuotaEnough(count, mode) {
+      return true;
+    }
+
+    function genWizardConfirmHtml(panelKey) {
+      const st = genWizardState[panelKey] || {};
+      const count = st.count || 1;
+      const mode = st.mode || "immediate";
+      const pending = currentUser?.cdk_pending || 0;
+      const bal = agentAvailableBalance();
+      const bookBal = currentUser?.balance || 0;
+      const pendingWd = currentUser?.pending_withdraw || 0;
+      const cost = agentGenCost(count, mode);
+      const unitPrice = currentUser?.cdk_cost_price || 0;
+      const modeLabel = mode === "on_activate" ? "预生成（激活后扣余额）" : "普通生成（立即扣余额）";
+      let extra = "";
+      if (cost > 0) {
+        const balOk = bal >= cost;
+        const costHint = `（${count} × ¥${unitPrice.toFixed(2)}）`;
+        extra += `<div class="gen-account-box">${balOk
+          ? `${mode === "immediate" ? "本次将扣费" : "本次激活后扣费"} <b>¥${cost.toFixed(2)}</b>${costHint}，当前可用余额 <b>¥${bal.toFixed(2)}</b>`
+          : `可用余额不足：可用 ¥${bal.toFixed(2)}${pendingWd > 0 ? `（账面 ¥${bookBal.toFixed(2)}，待审提现 ¥${pendingWd.toFixed(2)}）` : ""}，需要 ¥${cost.toFixed(2)}${costHint}，请先充值`}
+          ${!balOk ? `<div style="margin-top:8px"><button type="button" class="btn secondary small" onclick="showPage('recharge'); closeGenPanels();">前往账户充值</button></div>` : ""}
+        </div>`;
+      }
+      if (mode === "on_activate") {
+        const limit = agentPreGenerateLimit();
+        const need = pending + count;
+        const after = limit - need;
+        extra += `<div class="gen-account-box" style="margin-top:8px">预生成上限为当前余额可买数量的 10 倍（待激活 ${pending} + 本次 ${count}）。<br>${after < 0
+          ? `预生成额度不足：需 ${need} 张，上限 ${limit} 张，请先充值余额`
+          : `预生成后剩余额度约 <b>${after}</b> / ${limit} 张`}</div>`;
+      }
+      return `
+        <div class="gen-confirm-row"><span>游戏</span><b>${esc(st.name || "-")}</b></div>
+        <div class="gen-confirm-row"><span>AppID</span><b>${st.appid || "-"}</b></div>
+        <div class="gen-confirm-row"><span>数量</span><b>${count} 张</b></div>
+        <div class="gen-confirm-row"><span>模式</span><b>${modeLabel}</b></div>${extra}`;
+    }
+
+    function genWizardGo(panelKey, step) {
+      if (step >= 2) genWizardReadQty(panelKey);
+      const st = genWizardState[panelKey] || {};
+      st.step = step;
+      genWizardState[panelKey] = st;
+      [1,2,3].forEach(n => document.getElementById("genStep" + n + "-" + panelKey)?.classList.toggle("hidden", n !== step));
+      genWizardUpdateStepper(panelKey, step);
+      if (step === 3) {
+        const box = document.getElementById("genConfirm-" + panelKey);
+        if (box) box.innerHTML = genWizardConfirmHtml(panelKey);
+      }
+    }
+
+    function closeGenPanels() {
+      closeGenModal();
+    }
+
+    async function genWizardSubmit(panelKey) {
+      const st = genWizardState[panelKey] || {};
+      if (!st.mode) return toast("请选择生成模式", "err");
+      const count = st.count || 1;
+      if (!agentBalanceEnough(count, st.mode)) return toast("可用余额不足，请先充值", "err");
+      if (!agentQuotaEnough(count, st.mode)) return toast("额度不足，请联系上级充值", "err");
+      await genCdkWithMode(st.appid, st.name, st.mode, panelKey, count);
+    }
+
+    function showCdkResultModal(d, appid, name, billing_mode) {
+      lastGeneratedCdks = d.cdks;
+      document.getElementById("modalTitle").textContent = "已为「" + name + "」生成 CDK";
+      document.getElementById("modalSub").textContent = "AppID " + appid + " · 共 " + d.cdks.length + " 个";
+      const textEl = document.getElementById("modalCdksText");
+      textEl.value = d.cdks.join("\n");
+      textEl.style.height = "auto";
+      textEl.style.height = Math.min(320, Math.max(160, textEl.scrollHeight + 4)) + "px";
+      document.getElementById("cdkModal").classList.add("show");
+      if (d.user) applyUserUI(d.user);
+      toast(billing_mode === "on_activate" ? ("预生成 " + d.cdks.length + " 个，激活后才扣余额") : ("成功生成 " + d.cdks.length + " 个 CDK"), "ok");
+    }
+
+    async function genCdkWithMode(appid, name, billing_mode, panelKey, countOverride) {
+      const st = genWizardState[panelKey] || {};
+      const count = countOverride || st.count || 1;
+      const d = await api("/api/admin/cdk/generate", { method:"POST", body: { appid, name, count, billing_mode } });
+      if (!d.ok) { toast(d.message || "生成失败", "err"); return; }
+      closeGenModal();
+      showCdkResultModal(d, appid, name, billing_mode);
+      if (currentPage === "dashboard") loadDashboard();
+    }
+
+    function gameCardHtml(g, idx, scope) {
+      scope = scope || "cat";
+      const panelKey = scope + "-" + g.appid;
+      return `
+        <div class="catalog-card">
+          <div class="catalog-cover"><img src="${g.header}" alt="" loading="lazy" onerror="this.style.display='none'" /><span class="catalog-appid">${g.appid}</span>${g.installed ? '<span class="catalog-installed" style="position:absolute;top:6px;left:6px;background:var(--primary);color:#fff;font-size:10px;padding:2px 6px;border-radius:6px">已入库</span>' : ''}${g.has_manifest ? '<span style="position:absolute;bottom:6px;left:6px;background:#4a9ced;color:#fff;font-size:10px;padding:2px 6px;border-radius:6px">有清单</span>' : '<span style="position:absolute;bottom:6px;left:6px;background:#64748b;color:#fff;font-size:10px;padding:2px 6px;border-radius:6px">无清单</span>'}</div>
+          <div class="catalog-body">
+            <div class="catalog-name" title="${esc(g.name)}">${esc(g.name)}</div>
+            <div class="btn-group" style="margin:8px 0 6px">
+              <button class="btn secondary small" onclick="window.open('${g.store_url || ('https://store.steampowered.com/app/' + g.appid)}','_blank')">Steam</button>
+            </div>
+            ${genPanelHtml(g.appid, g.name, panelKey, g.has_manifest)}
+          </div>
+        </div>`;
+    }
+
+    function billingModeLabel(mode, charged, used, revoked) {
+      if (revoked) return '<span class="tag off">已回收</span>';
+      if (mode === "on_activate") {
+        if (used && charged) return '<span class="tag ok">已激活扣费</span>';
+        if (used) return '<span class="tag used">已激活</span>';
+        return '<span class="tag role">预生成</span>';
+      }
+      return '<span class="tag ok">即时</span>';
+    }
+    function toggleSidebar() { document.getElementById("sidebar").classList.toggle("open"); }
+    let sessionReady = false;
+
+    function syncToken() {
+      token = localStorage.getItem(TOKEN_KEY) || "";
+      return token;
+    }
+
+    function fetchOpts(opts) {
+      return Object.assign({ credentials: "same-origin" }, opts || {});
+    }
+
+    function authHeaders(extra) {
+      const h = Object.assign({}, extra || {});
+      const t = syncToken();
+      if (t) h.Authorization = "Bearer " + t;
+      return h;
+    }
+
+    async function api(path, opts) {
+      opts = opts || {};
+      setLoading(true);
+      const timeoutMs = (opts.timeout != null ? opts.timeout : 120) * 1000;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+      try {
+        const headers = authHeaders(opts.headers);
+        if (opts.body && typeof opts.body === "object") { headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(opts.body); }
+        const { timeout, ...restOpts } = opts;
+        const r = await fetch(path, fetchOpts(Object.assign({}, restOpts, { headers, signal: ctrl.signal })));
+        let d = {}; try { d = await r.json(); } catch (_) {}
+        if (r.status === 401) {
+          if (sessionReady) logout(false);
+          return { ok: false, message: d.message || "请先登录", _status: 401 };
+        }
+        d._status = r.status;
+        return d;
+      } catch (e) {
+        if (e && e.name === "AbortError") {
+          return { ok: false, message: "请求超时，请稍后再试", _status: 408 };
+        }
+        return { ok: false, message: (e && e.message) || "网络错误", _status: 0 };
+      } finally { clearTimeout(timer); setLoading(false); }
+    }
+
+    function applyCommands(d) {
+      if (!d) return;
+      const url = d.public_url || PUBLIC_URL;
+      document.getElementById("cmdInstall").textContent = d.install_cmd || `irm ${url} | iex`;
+      document.getElementById("cmdCdk").textContent = d.cdk_cmd || `$cdk="XXXX"; irm ${url} | iex`;
+    }
+
+    function applyUserUI(user) {
+      currentUser = user;
+      const name = user.display_name || user.username;
+      document.getElementById("sidebarUser").textContent = name;
+      document.getElementById("userAvatar").textContent = name.charAt(0).toUpperCase();
+      document.getElementById("sidebarRole").textContent = `代理 · 余额 ${(user.balance||0).toFixed(2)} · 成本 ${(user.cdk_cost_price||0).toFixed(2)}`;
+      document.getElementById("setUser").value = user.username;
+      document.getElementById("setName").value = user.display_name || "-";
+      document.getElementById("setCost").value = (user.cdk_cost_price || 0).toFixed(2);
+      const minSub = (parseFloat(user.cdk_cost_price) || 0) + 0.01;
+      document.getElementById("subPrice").placeholder = "不低于 " + minSub.toFixed(2);
+      document.getElementById("subAgentHint").textContent = `您的成本价 ${(user.cdk_cost_price||0).toFixed(2)}，给下级设置更高单价，差价即为利润`;
+      const pending = user.cdk_pending || 0;
+      const price = user.cdk_cost_price || 0;
+      const available = user.available_balance != null ? user.available_balance : Math.max(0, (user.balance || 0) - (user.pending_withdraw || 0));
+      const limit = price > 0 ? Math.floor(available / price) * 10 : 0;
+      document.getElementById("dQuota").textContent = `${pending} / ${limit} 待激活`;
+      document.getElementById("quotaBar").style.width = (limit ? Math.min(100, Math.round(pending / limit * 100)) : 0) + "%";
+    }
+
+    async function enterApp(user, extra) {
+      localStorage.removeItem("admin_token");
+      if (user && user.api_key) apiKeyValue = user.api_key;
+      const site = (extra && extra.site_name) || "代理工作台";
+      document.getElementById("siteName").textContent = site;
+      applyUserUI(user);
+      applyCommands(extra);
+      await showPage("dashboard");
+    }
+
+    function goLogin() {
+      sessionReady = false;
+      localStorage.removeItem(TOKEN_KEY);
+      token = "";
+      currentUser = null;
+      location.href = "/login";
+    }
+
+    async function checkSession() {
+      sessionReady = false;
+      syncToken();
+      if (!token) { goLogin(); return; }
+      let d = {};
+      try {
+        const r = await fetch("/api/admin/me", fetchOpts({ headers: authHeaders() }));
+        const text = await r.text();
+        try { d = JSON.parse(text); } catch (_) {}
+        if (!r.ok || !d.ok || !d.user || !d.user.role) { goLogin(); return; }
+        if (d.user.role === "superadmin") {
+          localStorage.setItem("admin_token", token);
+          localStorage.removeItem(TOKEN_KEY);
+          location.href = "/admin";
+          return;
+        }
+        if (d.user.role !== "agent") { goLogin(); return; }
+        sessionReady = true;
+      } catch (_) {
+        goLogin();
+        return;
+      }
+      try {
+        await enterApp(d.user, d);
+        const qs = new URLSearchParams(location.search);
+        if (qs.get("paid") === "1") {
+          toast("支付成功，余额即将更新", "ok");
+          history.replaceState({}, "", location.pathname);
+          await showPage("recharge");
+        } else if (qs.get("page") === "recharge") {
+          await showPage("recharge");
+        }
+      } catch (e) {
+        console.error("enterApp failed", e);
+        toast("界面加载失败，请刷新重试", "err");
+      }
+    }
+
+    function logout(notify) {
+      if (token) fetch("/api/admin/logout", { method:"POST", headers: authHeaders() }).catch(() => {});
+      if (notify !== false) toast("已退出");
+      goLogin();
+    }
+    function doLogout() { logout(true); }
+
+    async function showPage(name) {
+      if (name === "generate") name = "games";
+      currentPage = name;
+      document.querySelectorAll(".content > section").forEach(s => s.classList.add("hidden"));
+      document.getElementById("page-" + name).classList.remove("hidden");
+      document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.page === name));
+      const meta = PAGE_META[name] || [name, ""];
+      document.getElementById("pageTitle").textContent = meta[0];
+      document.getElementById("pageDesc").textContent = meta[1];
+      document.getElementById("sidebar").classList.remove("open");
+      await refreshPage();
+    }
+
+    async function refreshPage() {
+      const fn = ({ dashboard: loadDashboard, cdk: loadCdkList, logs: loadLogs, games: loadGames, subagents: loadSubAgents, wallet: loadWallet, recharge: loadRechargePage, withdraw: loadWithdrawPage, settings: loadSettingsPage }[currentPage]);
+      if (fn) await fn();
+    }
+
+    function updateRcPayUi() {
+      const btn = document.getElementById("rcSubmitBtn");
+      const hint = document.getElementById("rcDisabledHint");
+      if (btn) {
+        btn.disabled = !paymentOnlineEnabled;
+        btn.textContent = paymentOnlineEnabled ? "立即支付" : "在线支付未开启";
+      }
+      hint?.classList.toggle("hidden", paymentOnlineEnabled);
+    }
+
+    function payOrderStatusTag(status) {
+      if (status === "paid") return '<span class="tag ok">已支付</span>';
+      if (status === "pending") return '<span class="tag used">待支付</span>';
+      return `<span class="tag off">${esc(status || "-")}</span>`;
+    }
+
+    function rcStatusTag(status) {
+      if (status === "approved") return '<span class="tag ok">已通过</span>';
+      if (status === "rejected") return '<span class="tag off">已拒绝</span>';
+      return '<span class="tag used">待审核</span>';
+    }
+
+    function renderRcPresets() {
+      const box = document.getElementById("rcPresets");
+      if (!box) return;
+      box.innerHTML = RC_PRESETS.map(n =>
+        `<button type="button" class="rc-preset" data-amt="${n}" onclick="pickRcPreset(${n})">¥${n}</button>`
+      ).join("") + `<label class="rc-preset-custom" id="rcCustomWrap">
+        <span>自定义</span>
+        <input id="rcCustomAmount" type="number" step="0.01" min="0.01" placeholder="金额" oninput="pickRcCustom(this.value)" />
+      </label>`;
+    }
+
+    function getRcAmount() {
+      const custom = parseFloat(document.getElementById("rcCustomAmount")?.value || "");
+      if (Number.isFinite(custom) && custom > 0) return custom;
+      const hidden = parseFloat(document.getElementById("rcAmount")?.value || "");
+      return Number.isFinite(hidden) && hidden > 0 ? hidden : NaN;
+    }
+
+    function pickRcPreset(n) {
+      document.getElementById("rcAmount").value = n;
+      const custom = document.getElementById("rcCustomAmount");
+      if (custom) custom.value = "";
+      document.querySelectorAll(".rc-preset").forEach(btn => btn.classList.toggle("active", btn.dataset.amt === String(n)));
+      document.getElementById("rcCustomWrap")?.classList.remove("active");
+    }
+
+    function pickRcCustom(val) {
+      document.getElementById("rcAmount").value = "";
+      document.querySelectorAll(".rc-preset").forEach(btn => btn.classList.remove("active"));
+      document.getElementById("rcCustomWrap")?.classList.toggle("active", !!String(val || "").trim());
+    }
+
+    async function loadRechargePage() {
+      if (currentUser) {
+        document.getElementById("rcUserDisplay").value = currentUser.display_name
+          ? currentUser.username + "（" + currentUser.display_name + "）"
+          : currentUser.username;
+        document.getElementById("rcBal").textContent = (currentUser.balance || 0).toFixed(2);
+        const price = currentUser.cdk_cost_price || 0;
+        const available = currentUser.available_balance != null ? currentUser.available_balance : Math.max(0, (currentUser.balance || 0) - (currentUser.pending_withdraw || 0));
+        const limit = price > 0 ? Math.floor(available / price) * 10 : 0;
+        document.getElementById("rcQuota").textContent = `${currentUser.cdk_pending || 0} / ${limit}`;
+        document.getElementById("rcPending").textContent = String(currentUser.cdk_pending || 0);
+      }
+      renderRcPresets();
+      try {
+        const ps = await api("/api/public/payment/status");
+        paymentOnlineEnabled = !!(ps.ok && ps.epay_enabled && (ps.channels || []).includes("alipay"));
+      } catch (_) {
+        paymentOnlineEnabled = false;
+      }
+      updateRcPayUi();
+      const pays = await api("/api/payment/orders");
+      const tbody = document.getElementById("rcHistoryTable");
+      const items = (pays.items || []).slice(0, 50);
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty">暂无充值记录</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(it => `<tr>
+        <td style="font-size:12px;color:var(--muted)">${esc(it.created_at || "-")}</td>
+        <td><b>¥${(it.amount_cny || 0).toFixed(2)}</b></td>
+        <td>${payOrderStatusTag(it.status || "pending")}</td>
+        <td style="font-size:12px">${esc(it.channel === "alipay" ? "支付宝" : (it.channel || "-"))}${it.paid_at ? `<div style="color:var(--muted)">到账 ${esc(it.paid_at)}</div>` : ""}</td>
+      </tr>`).join("");
+    }
+
+    async function loadWithdrawPage() {
+      if (currentUser) {
+        const totalAvail = agentAvailableBalance();
+        const withdrawable = agentWithdrawableBalance();
+        const pending = currentUser.pending_withdraw || 0;
+        document.getElementById("wdBalDisplay").value = pending > 0
+          ? `¥ ${totalAvail.toFixed(2)}（待审提现 ¥${pending.toFixed(2)}）`
+          : `¥ ${totalAvail.toFixed(2)}`;
+        const wdProfit = document.getElementById("wdProfitDisplay");
+        if (wdProfit) wdProfit.value = `¥ ${withdrawable.toFixed(2)}`;
+        const canWithdraw = withdrawable >= 500;
+        const hint = document.getElementById("wdMinHint");
+        const btn = document.getElementById("wdSubmitBtn");
+        if (hint) hint.textContent = canWithdraw ? "已满足最低提现门槛：分润余额满 500 元可提现" : `分润余额满 500 元才可以提现，当前可提现 ¥${withdrawable.toFixed(2)}`;
+        if (btn) {
+          btn.disabled = !canWithdraw;
+          btn.textContent = canWithdraw ? "提交提现申请" : "未满 500 元不能提现";
+        }
+      }
+      const d = await api("/api/admin/withdraw/requests");
+      const tbody = document.getElementById("wdHistoryTable");
+      const items = d.items || [];
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无提现记录</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(it => `<tr>
+        <td style="font-size:12px;color:var(--muted)">${esc(it.created_at||"-")}</td>
+        <td><b>¥${(it.amount||0).toFixed(2)}</b></td>
+        <td>${rcStatusTag(it.status||"pending")}</td>
+        <td style="font-size:12px">${esc(it.payout_info||"-")}</td>
+        <td style="font-size:12px">${esc(it.review_note||"-")}</td>
+      </tr>`).join("");
+    }
+
+    async function submitWithdraw() {
+      const amount = parseFloat(document.getElementById("wdAmount").value);
+      const payout = document.getElementById("wdPayout").value.trim();
+      const note = document.getElementById("wdNote").value.trim();
+      if (!Number.isFinite(amount) || amount <= 0) return toast("请填写有效金额", "err");
+      if (agentWithdrawableBalance() < 500) return toast("可提现分润满 500 元才可以提现", "err");
+      if (amount < 500) return toast("提现金额最低 500 元", "err");
+      if (amount > agentWithdrawableBalance()) return toast("提现金额不能超过可提现分润", "err");
+      if (!payout) return toast("请填写收款信息", "err");
+      const d = await api("/api/admin/withdraw/apply", { method: "POST", body: { amount, payout_info: payout, note } });
+      if (!d.ok) return toast(d.message || "提交失败", "err");
+      toast("提现申请已提交", "ok");
+      document.getElementById("wdAmount").value = "";
+      loadWithdrawPage();
+    }
+
+    async function submitSelfRecharge() {
+      if (!paymentOnlineEnabled) return toast("在线支付未开启，请联系管理员", "err");
+      const num = getRcAmount();
+      if (!Number.isFinite(num) || num <= 0) return toast("请选择或输入充值金额", "err");
+      document.getElementById("rcSubmitBtn").disabled = true;
+      try {
+        const d = await api("/api/payment/create", { method: "POST", body: { amount: num, channel: "alipay" } });
+        if (!d.ok) return toast(d.message || "创建支付失败", "err");
+        const order = d.order || {};
+        if (!order.id) return toast("订单创建失败", "err");
+        const payUrl = order.checkout_url || order.payurl || order.pay_submit_url;
+        if (payUrl && payUrl !== "success" && payUrl !== "ok" &&
+            (/^https?:\/\//i.test(payUrl) || /^alipays:/i.test(payUrl))) {
+          window.location.assign(payUrl);
+          return;
+        }
+        window.location.assign("/pay?order=" + encodeURIComponent(order.id));
+      } finally {
+        document.getElementById("rcSubmitBtn").disabled = !paymentOnlineEnabled;
+      }
+    }
+
+    async function doSearch() {
+      const q = document.getElementById("searchInput").value.trim();
+      const wrap = document.getElementById("searchResultsWrap");
+      const box = document.getElementById("searchResults");
+      if (!q) { wrap.classList.add("hidden"); box.innerHTML = ""; searchGamesItems = []; return; }
+      wrap.classList.remove("hidden");
+      box.innerHTML = '<div class="empty" style="grid-column:1/-1">搜索中…</div>';
+      const d = await api("/api/admin/search?q=" + encodeURIComponent(q) + "&manifest_only=1");
+      if (!d.ok || !d.games.length) { searchGamesItems = []; box.innerHTML = '<div class="empty" style="grid-column:1/-1">未找到有清单的游戏（仅显示可入库）</div>'; return; }
+      searchGamesItems = d.games;
+      box.innerHTML = d.games.map((g, i) => gameCardHtml(g, i, "search")).join("");
+    }
+
+    function renderApiKeyUI(d) {
+      const loading = document.getElementById("apiKeyLoading");
+      const exists = document.getElementById("apiKeyExists");
+      const empty = document.getElementById("apiKeyEmpty");
+      const docs = document.getElementById("apiDocsPanel");
+      loading.classList.add("hidden");
+      const key = (d && (d.api_key || apiKeyValue)) || "";
+      apiKeyValue = key;
+      if (key) {
+        exists.classList.remove("hidden");
+        empty.classList.add("hidden");
+        docs.classList.remove("hidden");
+        const inp = document.getElementById("apiKeyInput");
+        inp.value = key;
+        inp.type = apiKeyVisible ? "text" : "password";
+        document.getElementById("apiKeyToggleBtn").textContent = apiKeyVisible ? "隐藏" : "显示";
+      } else {
+        exists.classList.add("hidden");
+        empty.classList.remove("hidden");
+        docs.classList.add("hidden");
+      }
+      if (d && d.ok) {
+        const ep = d.generate_url || (d.endpoints && d.endpoints.generate) || (PUBLIC_URL.replace(/\/$/, "") + "/api2/cdkeys/generate");
+        document.getElementById("apiGenerateEndpoint").textContent = "POST " + ep;
+        document.getElementById("apiCurlExample").textContent = (d.examples && d.examples.generate_curl) || "";
+      }
+    }
+
+    function toggleApiKeyVisible() {
+      apiKeyVisible = !apiKeyVisible;
+      const inp = document.getElementById("apiKeyInput");
+      inp.type = apiKeyVisible ? "text" : "password";
+      document.getElementById("apiKeyToggleBtn").textContent = apiKeyVisible ? "隐藏" : "显示";
+    }
+
+    async function loadSettingsPage() {
+      document.getElementById("apiKeyLoading").classList.remove("hidden");
+      document.getElementById("apiKeyExists").classList.add("hidden");
+      document.getElementById("apiKeyEmpty").classList.add("hidden");
+      const d = await api("/api/admin/agent/api-key");
+      if (!d.ok) { toast(d.message || "加载失败", "err"); return; }
+      renderApiKeyUI(d);
+    }
+
+    function copyApiKey() {
+      if (!apiKeyValue) return toast("暂无 API 密钥", "err");
+      copyText(apiKeyValue);
+    }
+
+    function copyApiEndpoint() {
+      const t = document.getElementById("apiGenerateEndpoint").textContent.replace(/^POST\s+/i, "").trim();
+      if (t) copyText(t.startsWith("http") ? t : (PUBLIC_URL.replace(/\/$/, "") + (t.startsWith("/") ? t : "/" + t)));
+    }
+
+    function copyApiCurlExample() {
+      copyText(document.getElementById("apiCurlExample").textContent);
+    }
+
+    async function generateApiKey() {
+      const d = await api("/api/admin/agent/api-key/generate", { method: "POST", body: {} });
+      if (!d.ok) return toast(d.message || "生成失败", "err");
+      apiKeyValue = d.api_key || "";
+      apiKeyVisible = true;
+      renderApiKeyUI(d);
+      toast(d.message || "API密钥生成成功", "ok");
+    }
+
+    function confirmRegenerateApiKey() {
+      showConfirm(
+        "重新生成 API 密钥",
+        "重新生成 API 密钥后，旧密钥将立即失效。请确保您已更新所有使用该密钥的应用程序。确定继续吗？",
+        async () => {
+          const d = await api("/api/admin/agent/api-key/regenerate", { method: "POST", body: {} });
+          if (!d.ok) return toast(d.message || "操作失败", "err");
+          apiKeyValue = d.api_key || "";
+          apiKeyVisible = true;
+          renderApiKeyUI(d);
+          toast(d.message || "API密钥重新生成成功", "ok");
+        }
+      );
+    }
+
+    function confirmClearApiKey() {
+      showConfirm(
+        "清除 API 密钥",
+        "清除 API 密钥后将无法恢复，所有使用该密钥的应用程序将无法正常工作。确定清除吗？",
+        async () => {
+          const d = await api("/api/admin/agent/api-key/clear", { method: "POST", body: {} });
+          if (!d.ok) return toast(d.message || "操作失败", "err");
+          apiKeyValue = "";
+          apiKeyVisible = false;
+          renderApiKeyUI({ ok: true, api_key: null, has_api_key: false });
+          toast(d.message || "API密钥清除成功", "ok");
+        }
+      );
+    }
+
+    async function loadDashboard() {
+      const [dash, logs, info] = await Promise.all([api("/api/admin/dashboard"), api("/api/admin/logs?limit=8"), api("/api/public/announcement")]);
+      if (!dash.ok) return;
+      applyCommands(dash);
+      if (dash.user) applyUserUI(dash.user);
+      const bar = document.getElementById("announcementBar");
+      if (bar && info.ok && info.enabled && info.content) {
+        bar.textContent = info.content;
+        bar.classList.remove("hidden");
+      } else if (bar) bar.classList.add("hidden");
+      document.getElementById("dTotal").textContent = dash.cdk_total;
+      document.getElementById("dUnused").textContent = dash.cdk_unused;
+      document.getElementById("dUsed").textContent = dash.cdk_used;
+      document.getElementById("dToday").textContent = dash.today_activated;
+      document.getElementById("dBalance").textContent = (dash.balance || 0).toFixed(2);
+      document.getElementById("dCostHint").textContent = "成本价 " + (dash.cdk_cost_price || 0).toFixed(2) + " / CDK";
+      document.getElementById("dSubAgents").textContent = dash.sub_agent_count || 0;
+      const recent = logs.items || [];
+      document.getElementById("recentLogs").innerHTML = recent.length ? recent.map(it => `<tr><td>${esc(it.name||"-")}</td><td><code>${it.cdk}</code></td><td style="font-size:12px;color:var(--muted)">${it.used_at||"-"}</td></tr>`).join("") : '<tr><td colspan="3" class="empty">暂无</td></tr>';
+    }
+
+    function closeModal() { document.getElementById("cdkModal").classList.remove("show"); }
+    function copyAllCdks() {
+      const el = document.getElementById("modalCdksText");
+      copyText(el ? el.value : lastGeneratedCdks.join("\n"));
+    }
+
+    function setCdkFilter(f) {
+      cdkFilter = f;
+      document.querySelectorAll("#cdkFilterTabs button").forEach((b, i) => b.classList.toggle("active", (f === "all" && i === 0) || (f === "unused" && i === 1) || (f === "used" && i === 2)));
+      if (cdkGameMode) searchCdkByGame();
+      else renderCdkTable();
+    }
+
+    function cdkDateKey(createdAt) {
+      if (!createdAt) return "未知日期";
+      const m = String(createdAt).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+      return m ? `${m[1]}-${m[2]}-${m[3]}` : "未知日期";
+    }
+
+    function formatCdkDateLabel(key) {
+      if (key === "未知日期") return key;
+      const m = key.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return key;
+      const y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+      const now = new Date();
+      return y !== now.getFullYear() ? `${y}年${mo}月${d}日` : `${mo}月${d}日`;
+    }
+
+    function filterCdkItems(items) {
+      let list = items.slice();
+      if (cdkFilter === "unused") list = list.filter(x => !x.used && !x.revoked);
+      if (cdkFilter === "used") list = list.filter(x => x.used);
+      const q = (document.getElementById("cdkSearch")?.value || "").trim().toLowerCase();
+      if (q && !cdkGameMode) {
+        list = list.filter(x => x.cdk.toLowerCase().includes(q) || String(x.appid).includes(q) || (x.name || "").toLowerCase().includes(q));
+      }
+      return list;
+    }
+
+    function cdkRowHtml(it) {
+      const cdk = it.cdk;
+      return `<tr>
+        <td><code>${esc(cdk)}</code></td><td>${esc(it.name || "-")}</td><td>${it.appid}</td>
+        <td>${it.revoked ? '<span class="tag off">已回收</span>' : `<span class="tag ${it.used ? "used" : "ok"}">${it.used ? "已使用" : "未使用"}</span>`}</td>
+        <td>${billingModeLabel(it.billing_mode || "immediate", it.charged, it.used, it.revoked)}</td>
+        <td style="font-size:12px;color:var(--muted)">${it.created_at || "-"}</td>
+        <td><div class="td-actions">
+          <button class="btn secondary small" onclick="copyText('${cdk}')">复制</button>
+          <button class="btn secondary small" onclick="copyText(cdkInstallCmd('${cdk}'))">命令</button>
+          ${!it.used && !it.revoked ? `<button class="btn danger small" onclick="deleteCdk('${cdk}')">删除</button>` : ""}
+          ${it.used && !it.revoked ? `<button class="btn danger small" onclick="recycleCdk('${cdk}')">回收</button>` : ""}
+          ${it.revoked ? `<button class="btn secondary small" onclick="copyRevokeCmd('${cdk}')">卸载</button>` : ""}
+        </div></td></tr>`;
+    }
+
+    function renderCdkTable() {
+      const items = filterCdkItems(allCdkItems);
+      document.getElementById("cdkListCount").textContent = items.length + " 条";
+      const tbody = document.getElementById("cdkTable");
+      if (!items.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无 CDK</td></tr>'; return; }
+      tbody.innerHTML = items.map(cdkRowHtml).join("");
+    }
+
+    function toggleCdkDateGroup(id) {
+      const body = document.getElementById(id);
+      const arrow = document.getElementById(id + "-arrow");
+      if (!body) return;
+      body.classList.toggle("collapsed");
+      if (arrow) arrow.textContent = body.classList.contains("collapsed") ? "▶" : "▼";
+    }
+
+    function renderCdkGameGroups() {
+      const items = cdkGameItems.slice();
+      const groups = new Map();
+      items.forEach(it => {
+        const key = cdkDateKey(it.created_at);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(it);
+      });
+      const sortedKeys = [...groups.keys()].sort((a, b) => {
+        if (a === "未知日期") return 1;
+        if (b === "未知日期") return -1;
+        return b.localeCompare(a);
+      });
+      const meta = cdkGameMeta || {};
+      const gameTitle = meta.game_name ? esc(meta.game_name) : "—";
+      const appid = meta.appid || (items[0] && items[0].appid) || "—";
+      document.getElementById("cdkListCount").textContent = items.length + " 条 · " + sortedKeys.length + " 个生成日";
+      const banner = document.getElementById("cdkGameBanner");
+      banner.classList.remove("hidden");
+      banner.innerHTML = `<strong>${gameTitle}</strong>（AppID ${appid}）共 <strong>${items.length}</strong> 张 CDK，按生成日期分组显示`;
+      const host = document.getElementById("cdkGameGrouped");
+      if (!items.length) {
+        host.innerHTML = '<p class="empty" style="padding:24px;text-align:center;color:var(--muted)">该游戏下暂无 CDK</p>';
+        return;
+      }
+      host.innerHTML = sortedKeys.map((key, gi) => {
+        const dayItems = groups.get(key);
+        const bodyId = "cdk-date-" + gi;
+        const label = formatCdkDateLabel(key);
+        const compact = key !== "未知日期" ? key.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, y, m, d) => `${parseInt(m, 10)}.${parseInt(d, 10)}`) : label;
+        return `<div class="cdk-date-group">
+          <div class="cdk-date-head" onclick="toggleCdkDateGroup('${bodyId}')">
+            <span>${label} <span style="font-weight:400;color:var(--muted);font-size:13px">（${compact}）</span></span>
+            <span><span class="count">${dayItems.length} 张</span><span class="arrow" id="${bodyId}-arrow">▼</span></span>
+          </div>
+          <div class="cdk-date-body" id="${bodyId}">
+            <div class="table-wrap"><table><thead><tr><th>CDK</th><th>状态</th><th>计费</th><th>创建时间</th><th>操作</th></tr></thead><tbody>
+              ${dayItems.map(cdkRowHtml).join("")}
+            </tbody></table></div>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    async function searchCdkByGame() {
+      const q = (document.getElementById("cdkGameSearch")?.value || "").trim();
+      if (!q) return toast("请输入 AppID 或游戏名称", "err");
+      const param = /^\d+$/.test(q) ? `appid=${encodeURIComponent(q)}` : `game=${encodeURIComponent(q)}`;
+      const filt = cdkFilter !== "all" ? `&filter=${encodeURIComponent(cdkFilter)}` : "";
+      const d = await api(`/api/admin/cdk/list?${param}&limit=5000${filt}`);
+      if (!d.ok) return toast(d.message || "查询失败", "err");
+      cdkGameMode = true;
+      cdkGameItems = d.items || [];
+      cdkGameMeta = { appid: d.appid, game_name: d.game_name, query: q };
+      document.getElementById("cdkGameClearBtn").classList.remove("hidden");
+      document.getElementById("cdkFlatBlock").classList.add("hidden");
+      document.getElementById("cdkGameGrouped").classList.remove("hidden");
+      renderCdkGameGroups();
+    }
+
+    function clearCdkGameSearch() {
+      cdkGameMode = false;
+      cdkGameItems = [];
+      cdkGameMeta = {};
+      const inp = document.getElementById("cdkGameSearch");
+      if (inp) inp.value = "";
+      document.getElementById("cdkGameClearBtn").classList.add("hidden");
+      document.getElementById("cdkGameBanner").classList.add("hidden");
+      document.getElementById("cdkGameGrouped").classList.add("hidden");
+      document.getElementById("cdkGameGrouped").innerHTML = "";
+      document.getElementById("cdkFlatBlock").classList.remove("hidden");
+      loadCdkList();
+    }
+
+    async function loadCdkList() {
+      if (cdkGameMode) { await searchCdkByGame(); return; }
+      const filt = cdkFilter !== "all" ? `&filter=${encodeURIComponent(cdkFilter)}` : "";
+      const d = await api("/api/admin/cdk/list?limit=200" + filt);
+      allCdkItems = d.items || [];
+      renderCdkTable();
+    }
+
+    function exportUnused() {
+      const pool = cdkGameMode ? cdkGameItems : allCdkItems;
+      const unused = pool.filter(x => !x.used && !x.revoked);
+      if (!unused.length) return toast("没有未使用的 CDK", "err");
+      copyText(unused.map(x => x.cdk).join("\n"));
+    }
+
+    function showConfirm(title, msg, cb) { document.getElementById("confirmTitle").textContent = title; document.getElementById("confirmMsg").textContent = msg; confirmCallback = cb; document.getElementById("confirmModal").classList.add("show"); }
+    function closeConfirm(ok) { document.getElementById("confirmModal").classList.remove("show"); if (ok && confirmCallback) confirmCallback(); confirmCallback = null; }
+
+    function openRechargeModal(userId) {
+      const u = subAgentCache[userId];
+      if (!u) return toast("找不到下级信息", "err");
+      rechargeTargetId = userId;
+      const myBal = (currentUser?.balance || 0).toFixed(2);
+      document.getElementById("rechargeSub").textContent = `${u.display_name || u.username} · 余额 ${(u.balance||0).toFixed(2)}`;
+      document.getElementById("rechargeHint").innerHTML = `给下级充余额将从<strong>您的余额（当前 ¥${myBal}）</strong>中扣除同等金额。`;
+      document.getElementById("rechargeBalance").value = "";
+      document.getElementById("rechargeQuota").value = "";
+      document.getElementById("rechargeNote").value = "";
+      document.getElementById("rechargeModal").classList.add("show");
+    }
+    function closeRechargeModal() { document.getElementById("rechargeModal").classList.remove("show"); rechargeTargetId = ""; }
+    async function submitRecharge() {
+      if (!rechargeTargetId) return;
+      const balance = parseFloat(document.getElementById("rechargeBalance").value || "0");
+      const note = document.getElementById("rechargeNote").value.trim();
+      if (!Number.isFinite(balance) || balance <= 0) return toast("请填写充值金额", "err");
+      const d = await api("/api/admin/users/" + rechargeTargetId + "/recharge", { method:"POST", body: { balance: balance || 0, quota: 0, note } });
+      if (!d.ok) return toast(d.message || "充值失败", "err");
+      if (d.user) subAgentCache[rechargeTargetId] = d.user;
+      if (d.operator) applyUserUI(d.operator);
+      closeRechargeModal();
+      toast("充值成功", "ok");
+      loadSubAgents();
+      if (currentPage === "dashboard") loadDashboard();
+      if (currentPage === "wallet") loadWallet();
+    }
+
+    function copyRevokeCmd(cdk) {
+      copyText(`$cdk="${cdk}"; irm ${PUBLIC_URL}/revoke.ps1 | iex`);
+    }
+
+    function recycleCdk(cdk) {
+      showConfirm("回收 CDK", "回收后成本退回余额，CDK 失效。客户电脑若曾激活过，一般会在 5 分钟内自动禁玩；也可复制卸载命令手动执行。", async () => {
+        const d = await api("/api/admin/cdk/recycle", { method: "POST", body: { cdk } });
+        if (!d.ok) return toast(d.message || "回收失败", "err");
+        toast(`已回收，退回 ¥${(d.balance_refund||0).toFixed(2)}`, "ok");
+        if (d.client_revoke_cmd) copyText(d.client_revoke_cmd);
+        if (d.user) applyUserUI(d.user);
+        loadCdkList();
+        if (currentPage === "dashboard") loadDashboard();
+      });
+    }
+
+    function deleteCdk(cdk) {
+      showConfirm("删除 CDK", "确定删除 " + cdk + "？若已扣费将退还余额。", async () => {
+        const d = await api("/api/admin/cdk/delete", { method:"POST", body: { cdk } });
+        if (!d.ok) return toast(d.message || "删除失败", "err");
+        let msg = "已删除";
+        if ((d.balance_refund || 0) > 0) msg += `，已退还 ¥${Number(d.balance_refund).toFixed(2)}`;
+        toast(msg, "ok");
+        if (d.user) applyUserUI(d.user);
+        loadCdkList();
+        if (currentPage === "dashboard") loadDashboard();
+      });
+    }
+
+    function renderLogsTable() {
+      const q = (document.getElementById("logSearch")?.value || "").trim().toLowerCase();
+      let items = allLogItems;
+      if (q) items = items.filter(x => x.cdk.toLowerCase().includes(q) || String(x.appid).includes(q) || (x.name||"").toLowerCase().includes(q));
+      const tbody = document.getElementById("logsTable");
+      if (!items.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无记录</td></tr>'; return; }
+      tbody.innerHTML = items.map(it => `<tr><td><code>${it.cdk}</code></td><td>${esc(it.name||"-")}</td><td>${it.appid}</td><td style="font-size:12px;color:var(--muted)">${it.used_at||"-"}</td><td><code style="font-size:11px">${it.used_machine||"-"}</code></td></tr>`).join("");
+    }
+    async function loadLogs() { const d = await api("/api/admin/logs?limit=300"); allLogItems = d.items || []; renderLogsTable(); }
+
+    function setManifestFilter(f) { manifestFilter = f; document.querySelectorAll("#manifestFilterTabs button").forEach(b => b.classList.toggle("active", b.dataset.manifest === f)); gamesPage = 1; loadGames(); }
+    function setGameFilter(f) { gameFilter = f; document.querySelectorAll("#gameFilterTabs button").forEach(b => b.classList.toggle("active", b.dataset.filter === f)); gamesPage = 1; loadGames(); }
+    function gameSearch() { gamesPage = 1; loadGames(); }
+
+    async function enrichGameMeta() {
+      const appid = (document.getElementById("gameProbeAppid")?.value || "").trim();
+      if (!appid) return toast("请填写 AppID", "err");
+      if (!/^\d+$/.test(appid)) return toast("AppID 须为数字", "err");
+      const d = await api("/api/admin/games/enrich-meta", {
+        method: "POST",
+        body: { appid, force: true },
+        timeout: 60,
+      });
+      if (!d.ok) return toast(d.message || "补齐失败", "err");
+      toast((d.skipped ? "已有资料：" : "已补齐：") + (d.name || appid), "ok");
+      if (currentPage === "games") loadGames();
+    }
+
+    async function probeGameDepot() {
+      const appid = (document.getElementById("gameProbeAppid")?.value || "").trim();
+      const box = document.getElementById("gameProbeResult");
+      if (!appid) return toast("请填写 AppID", "err");
+      if (!/^\d+$/.test(appid)) return toast("AppID 须为数字", "err");
+      if (box) {
+        box.className = "game-probe-result show";
+        box.style.background = "#f1f5f9";
+        box.style.borderColor = "#cbd5e1";
+        box.style.color = "#475569";
+        box.textContent = "检测中，请稍候…";
+      }
+      const d = await api("/api/admin/games/probe?appid=" + encodeURIComponent(appid));
+      if (!box) return;
+      if (!d.ok) {
+        box.className = "game-probe-result show bad";
+        box.innerHTML = esc(d.message || "检测失败");
+        return;
+      }
+      const ok = !!(d.can_import || d.importable);
+      box.className = "game-probe-result show " + (ok ? "ok" : "bad");
+      const tag = ok
+        ? '<span class="tag ok" style="margin-left:6px">可生成 CDK</span>'
+        : '<span class="tag off" style="margin-left:6px">不可入库</span>';
+      const depots = (d.depot_sample && d.depot_sample.length)
+        ? `<div style="margin-top:6px;font-size:12px">Depot 示例：<code>${esc(d.depot_sample.join(", "))}</code></div>`
+        : "";
+      const gh = (d.github_sources && d.github_sources.length)
+        ? `<div style="margin-top:4px;font-size:12px">GitHub 源：${esc(d.github_sources.join(" · "))}</div>`
+        : "";
+      box.innerHTML = `<strong>${esc(d.name || "")}</strong> · AppID <code>${esc(d.appid)}</code>${tag}`
+        + (d.steam_type ? `<span style="margin-left:8px;color:var(--muted)">类型 ${esc(d.steam_type)}</span>` : "")
+        + `<div style="margin-top:8px">`
+        + `清单库：${d.in_manifest ? "已收录" : "未收录"} · `
+        + `Depot：${d.depot_total || 0} 个 · 有密钥：${d.depot_with_key || 0} 个 · 状态：${esc(d.status || "-")}`
+        + `</div>${depots}${gh}`
+        + `<div style="margin-top:8px">${esc(d.import_note || "")}</div>`
+        + `<div style="margin-top:6px;font-size:11px;color:var(--muted)">检测时间 ${esc(d.checked_at || "")}</div>`;
+    }
+
+    async function loadGames() {
+      const q = document.getElementById("gameSearch").value.trim();
+      const params = new URLSearchParams({ q, page: String(gamesPage), limit: "24", filter: gameFilter, manifest: manifestFilter, sort: "appid_desc" });
+      const grid = document.getElementById("gamesGrid");
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1">加载中…</div>';
+      const d = await api("/api/admin/games?" + params.toString());
+      if (!d.ok) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1">' + esc(d.message || "加载失败") + '</div>'; return; }
+      const stats = d.stats || {};
+      const snap = stats.manifest_in_steam_snapshot != null ? ` · 全库匹配 ${stats.manifest_in_steam_snapshot}` : "";
+      const synced = stats.search_synced > 0 ? ` · 已入库名称 ${stats.search_synced} 款` : "";
+      document.getElementById("gamesStatus").textContent = `可入库 ${stats.manifest_count||0} 款 · 当前列表 ${stats.filtered_count||0} 条${snap}${synced} · 第 ${stats.page||1}/${stats.total_pages||1} 页`;
+      gamesTotalPages = stats.total_pages || 1; gamesPage = stats.page || gamesPage;
+      const items = d.items || [];
+      if (!items.length) { grid.innerHTML = '<div class="empty" style="grid-column:1/-1">暂无游戏</div>'; renderGamesPager(); return; }
+      grid.innerHTML = items.map((g, i) => gameCardHtml(g, i, "cat")).join("");
+      renderGamesPager();
+    }
+
+    function renderGamesPager() {
+      const el = document.getElementById("gamesPager");
+      if (gamesTotalPages <= 1) { el.innerHTML = ""; return; }
+      el.innerHTML = `<button class="btn secondary small" ${gamesPage<=1?"disabled":""} onclick="gamesGoPage(${gamesPage-1})">上一页</button><span class="pager-info">${gamesPage}/${gamesTotalPages}</span><button class="btn secondary small" ${gamesPage>=gamesTotalPages?"disabled":""} onclick="gamesGoPage(${gamesPage+1})">下一页</button>`;
+    }
+    function gamesGoPage(p) { if (p < 1 || p > gamesTotalPages) return; gamesPage = p; loadGames(); }
+
+    async function loadInviteInfo() {
+      const d = await api("/api/admin/invite");
+      if (!d.ok) return;
+      document.getElementById("myInviteCode").value = d.invite_code || "";
+      document.getElementById("myInviteUrl").value = d.register_url || "";
+      const costEl = document.getElementById("inviteCostPrice");
+      const hintEl = document.getElementById("inviteCostHint");
+      if (costEl) costEl.value = d.invite_cost_price != null ? d.invite_cost_price : "";
+      if (hintEl) hintEl.textContent = `您的成本价 ${(d.my_cost_price||0).toFixed(2)}，下级不能低于 ${(d.min_cost_price||0).toFixed(2)} · 邀请注册时将按此单价生效`;
+      const subPrice = document.getElementById("subPrice");
+      if (subPrice && d.invite_cost_price != null && !subPrice.value) subPrice.value = d.invite_cost_price;
+    }
+
+    async function saveInviteCost() {
+      const price = parseFloat(document.getElementById("inviteCostPrice").value);
+      if (!Number.isFinite(price) || price <= 0) return toast("请填写有效的成本价", "err");
+      const d = await api("/api/admin/invite/settings", { method: "POST", body: { cdk_cost_price: price } });
+      if (!d.ok) return toast(d.message || "保存失败", "err");
+      document.getElementById("myInviteCode").value = d.invite_code || "";
+      document.getElementById("myInviteUrl").value = d.register_url || "";
+      document.getElementById("inviteCostPrice").value = d.invite_cost_price;
+      const subPrice = document.getElementById("subPrice");
+      if (subPrice) subPrice.value = d.invite_cost_price;
+      toast("邀请注册成本价已保存", "ok");
+    }
+
+    async function refreshInviteCode() {
+      if (!confirm("重新生成后，旧邀请链接将失效，确定继续？")) return;
+      const d = await api("/api/admin/invite/refresh", { method: "POST", body: {} });
+      if (!d.ok) return toast(d.message || "刷新失败", "err");
+      document.getElementById("myInviteCode").value = d.invite_code || "";
+      document.getElementById("myInviteUrl").value = d.register_url || "";
+      toast("邀请码已更新", "ok");
+    }
+
+    async function loadSubAgents() {
+      loadInviteInfo();
+      const d = await api("/api/admin/sub-agents");
+      subAgentCache = {};
+      (d.items || []).forEach(u => { subAgentCache[u.id] = u; });
+      const tbody = document.getElementById("subAgentsTable");
+      const items = d.items || [];
+      if (!items.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无下级</td></tr>'; return; }
+      tbody.innerHTML = items.map(u => `<tr>
+        <td><b>${esc(u.username)}</b></td><td>${esc(u.display_name||"-")}</td>
+        <td>${(u.cdk_cost_price||0).toFixed(2)}</td><td>${(u.balance||0).toFixed(2)}</td>
+        <td>${u.cdk_generated || 0}</td>
+        <td><span class="tag ${u.enabled?"ok":"off"}">${u.enabled?"正常":"禁用"}</span></td>
+        <td><div class="td-actions">
+          <button class="btn small" onclick="openRechargeModal('${u.id}')">充值</button>
+          <button class="btn secondary small" onclick="openEditSub('${u.id}')">改价</button>
+          <button class="btn danger small" onclick="deleteSub('${u.id}','${escAttr(u.username)}')">删除</button>
+        </div></td></tr>`).join("");
+    }
+
+    async function createSubAgent() {
+      const d = await api("/api/admin/sub-agents", { method:"POST", body: {
+        username: document.getElementById("subUser").value.trim(),
+        password: document.getElementById("subPass").value,
+        display_name: document.getElementById("subName").value.trim(),
+        cdk_cost_price: parseFloat(document.getElementById("subPrice").value),
+        cdk_quota: 0,
+        note: document.getElementById("subNote").value.trim(),
+      }});
+      if (!d.ok) return toast(d.message || "邀请失败", "err");
+      toast("下级已创建", "ok");
+      ["subUser","subPass","subName","subNote"].forEach(id => document.getElementById(id).value = "");
+      loadSubAgents(); loadDashboard();
+    }
+
+    function openEditSub(id) {
+      const u = subAgentCache[id]; if (!u) return;
+      document.getElementById("editSubId").value = u.id;
+      document.getElementById("editSubName").value = u.display_name || "";
+      document.getElementById("editSubPrice").value = u.cdk_cost_price || 0;
+      document.getElementById("editSubPass").value = "";
+      document.getElementById("editSubEnabled").checked = u.enabled;
+      document.getElementById("editSubModal").classList.add("show");
+    }
+    function closeEditSub() { document.getElementById("editSubModal").classList.remove("show"); }
+
+    async function saveEditSub() {
+      const id = document.getElementById("editSubId").value;
+      const body = {
+        display_name: document.getElementById("editSubName").value,
+        cdk_cost_price: parseFloat(document.getElementById("editSubPrice").value),
+        enabled: document.getElementById("editSubEnabled").checked,
+      };
+      const pwd = document.getElementById("editSubPass").value;
+      if (pwd) body.password = pwd;
+      const d = await api("/api/admin/users/" + id, { method:"PUT", body });
+      if (!d.ok) return toast(d.message || "保存失败", "err");
+      toast("已保存", "ok"); closeEditSub(); loadSubAgents();
+    }
+
+    function deleteSub(id, username) {
+      showConfirm("删除下级", "确定删除代理 " + username + "？", async () => {
+        const d = await api("/api/admin/users/" + id, { method:"DELETE" });
+        if (!d.ok) return toast(d.message || "删除失败", "err");
+        toast("已删除", "ok"); loadSubAgents(); loadDashboard();
+      });
+    }
+
+    async function loadWallet() {
+      const d = await api("/api/admin/wallet");
+      if (!d.ok) return;
+      document.getElementById("wBalance").textContent = (d.balance || 0).toFixed(2);
+      const wWithdrawable = document.getElementById("wWithdrawable");
+      if (wWithdrawable) wWithdrawable.textContent = (d.available_withdrawable_balance || 0).toFixed(2);
+      document.getElementById("wCost").textContent = (d.cdk_cost_price || 0).toFixed(2);
+      document.getElementById("wSubCount").textContent = d.sub_agent_count || 0;
+      const logs = d.recent_logs || [];
+      document.getElementById("walletLogs").innerHTML = logs.length ? logs.map(it => `<tr>
+        <td style="font-size:12px;color:var(--muted)">${it.created_at||"-"}</td>
+        <td>${esc(it.from_username||"-")}</td><td>${it.cdk_count||0}</td>
+        <td>${(it.unit_profit||0).toFixed(4)}</td><td><b style="color:var(--ok)">+${(it.amount||0).toFixed(4)}</b></td></tr>`).join("") : '<tr><td colspan="5" class="empty">暂无分润</td></tr>';
+    }
+
+    async function changePassword() {
+      const old_password = document.getElementById("oldPass").value;
+      const new_password = document.getElementById("newPass2").value;
+      const confirm = document.getElementById("newPass3").value;
+      if (new_password !== confirm) return toast("两次密码不一致", "err");
+      const d = await api("/api/admin/password", { method:"POST", body: { old_password, new_password } });
+      if (!d.ok) return toast(d.message || "修改失败", "err");
+      toast("密码已修改", "ok");
+      document.getElementById("oldPass").value = "";
+      document.getElementById("newPass2").value = "";
+      document.getElementById("newPass3").value = "";
+    }
+
+    document.getElementById("searchInput").addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+    document.getElementById("gameSearch").addEventListener("keydown", e => { if (e.key === "Enter") gameSearch(); });
+    checkSession();
+  </script>
+</body>
+</html>

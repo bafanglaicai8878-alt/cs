@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 本地配置与敏感数据（勿上传）
+config.json
+cdk_db.json
+admin_db.json
+client_db.json
+box_session.json
+sudama_cache.json
+data_backups/
+.public_cmd_base
+public_url.txt
+
+# 缓存与临时文件
+cache/
+catalog_cache.json
+steam_catalog_cache.json
+data/
+*.db
+*.db-wal
+*.db-shm
+*.log
+_probe_manifest.py
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini

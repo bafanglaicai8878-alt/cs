@@ -1,0 +1,4069 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CS Steam 管理台</title>
+  <link rel="stylesheet" href="/static/theme.css" />
+  <style>
+    :root {
+      --bg: #eef1f6;
+      --sidebar: #0f172a;
+      --sidebar-text: #94a3b8;
+      --sidebar-active: rgba(74, 156, 237, .18);
+      --sidebar-active-text: #7ec4ff;
+      --card: #ffffff;
+      --primary: #4a9ced;
+      --primary-dark: #2d7fd4;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --ok: #10b981;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --shadow: 0 1px 3px rgba(15,23,42,.06), 0 4px 16px rgba(15,23,42,.04);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .hidden { display: none !important; }
+
+    /* ===== 通用组件 ===== */
+    .field { margin-bottom: 18px; }
+    .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--muted); }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      background: #fff;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(74,156,237,.15);
+    }
+    .input-icon-wrap { position: relative; }
+    .input-icon-wrap input { padding-right: 42px; }
+    .input-icon-wrap .toggle-pwd {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      color: var(--muted); cursor: pointer; font-size: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    .btn:hover { background: var(--primary-dark); }
+    .btn:active { transform: scale(.98); }
+    .btn.block { width: 100%; padding: 12px; }
+    .btn.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+    .btn.secondary:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .btn.ghost { background: transparent; color: var(--muted); border: none; }
+    .btn.ghost:hover { background: #f1f5f9; color: var(--text); }
+    .btn.danger { background: var(--danger); }
+    .btn.danger:hover { background: #dc2626; }
+    .btn.small { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+    .btn:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .panel-head {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .panel-head h2 { font-size: 16px; font-weight: 600; }
+    .panel-head p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .panel-body { padding: 22px; }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .tag.ok { background: #d1fae5; color: #047857; }
+    .tag.used { background: #fef3c7; color: #b45309; }
+    .tag.off { background: #fee2e2; color: #b91c1c; }
+    .tag.role { background: #dbeafe; color: #1d4ed8; }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 48px 20px;
+    }
+    .empty svg { opacity: .35; margin-bottom: 12px; }
+
+    /* ===== 主布局 ===== */
+    #appView { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 240px;
+      background: var(--sidebar);
+      color: var(--sidebar-text);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+    .sidebar-brand {
+      padding: 22px 20px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .sidebar-brand .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--primary), #2563eb);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #fff;
+      font-size: 14px;
+    }
+    .sidebar-brand h2 { font-size: 15px; color: #f1f5f9; font-weight: 600; }
+    .sidebar-brand small { font-size: 11px; color: #64748b; }
+
+    .nav-section { padding: 16px 12px 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #475569; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      margin: 2px 8px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all .15s;
+      color: var(--sidebar-text);
+    }
+    .nav-item svg { width: 18px; height: 18px; opacity: .75; flex-shrink: 0; }
+    .nav-item:hover { background: rgba(255,255,255,.06); color: #e2e8f0; }
+    .nav-item.active {
+      background: var(--sidebar-active);
+      color: var(--sidebar-active-text);
+      font-weight: 500;
+    }
+    .nav-item.active svg { opacity: 1; }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 16px;
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
+    .user-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: rgba(255,255,255,.04);
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+    .user-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4a9ced, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .user-card .name { color: #f1f5f9; font-size: 13px; font-weight: 500; }
+    .user-card .role { color: #64748b; font-size: 11px; }
+
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .topbar-left h1 { font-size: 18px; font-weight: 600; }
+    .topbar-left .breadcrumb { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .url-badge {
+      font-size: 12px;
+      color: var(--muted);
+      background: #f1f5f9;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-family: Consolas, monospace;
+    }
+    .content { padding: 24px 28px 40px; flex: 1; }
+
+    /* ===== 统计卡片 ===== */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: var(--accent, var(--primary));
+    }
+    .stat-card .label { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+    .stat-card .value { font-size: 32px; font-weight: 700; color: var(--text); line-height: 1; }
+    .stat-card .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .stat-card.accent-green { --accent: var(--ok); }
+    .stat-card.accent-orange { --accent: var(--warn); }
+    .stat-card.accent-blue { --accent: var(--primary); }
+    .stat-card.accent-purple { --accent: #8b5cf6; }
+
+    .progress-bar {
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      margin-top: 12px;
+      overflow: hidden;
+    }
+    .progress-bar span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), #6366f1);
+      border-radius: 999px;
+      transition: width .4s;
+    }
+
+    /* ===== 命令块 ===== */
+    .cmd-grid { display: grid; gap: 14px; }
+    .cmd-block label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 8px; }
+    .cmd-row { display: flex; gap: 10px; align-items: stretch; }
+    .cmd-box {
+      flex: 1;
+      background: #0f172a;
+      color: #86efac;
+      padding: 13px 16px;
+      border-radius: 10px;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 12px;
+      word-break: break-all;
+      line-height: 1.6;
+    }
+    .cdk-batch-text {
+      width: 100%;
+      min-height: 160px;
+      max-height: 320px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #f8fafc;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text);
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    .cdk-batch-text:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,156,237,.12); }
+
+    /* ===== 表格 ===== */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .toolbar input, .toolbar select {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 13px;
+      min-width: 200px;
+    }
+    .toolbar .spacer { flex: 1; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      background: #f8fafc;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: none;
+      padding: 12px 14px;
+      text-align: left;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #f8fafc; }
+    td code {
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      background: #f1f5f9;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .td-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .tabs-inline {
+      display: inline-flex;
+      background: #f1f5f9;
+      padding: 4px;
+      border-radius: 10px;
+      gap: 2px;
+    }
+    .tabs-inline button {
+      padding: 7px 14px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .tabs-inline button.active {
+      background: #fff;
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+
+    /* ===== 游戏卡片 ===== */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .game-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #fff;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .game-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+    .game-card img { width: 100%; height: 100px; object-fit: cover; background: #e2e8f0; }
+    .game-card .body { padding: 14px; }
+    .game-card .title { font-size: 13px; font-weight: 600; margin-bottom: 4px; line-height: 1.4; }
+    .game-card .appid { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .game-card .actions { display: flex; gap: 8px; }
+    .game-card select {
+      flex: 1;
+      padding: 7px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    /* 游戏管理卡片 */
+    .catalog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .catalog-card {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #fff;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .catalog-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow);
+    }
+    .catalog-cover {
+      position: relative;
+      height: 94px;
+      background: #e2e8f0;
+    }
+    .catalog-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .catalog-appid {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(15, 23, 42, .82);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-family: Consolas, monospace;
+      backdrop-filter: blur(4px);
+    }
+    .catalog-installed {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(16, 185, 129, .9);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .catalog-manifest {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(74, 156, 237, .92);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .catalog-no-manifest {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: rgba(100, 116, 139, .85);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .catalog-body { padding: 12px 14px 14px; }
+    .catalog-name {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 38px;
+    }
+    .catalog-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .catalog-actions .btn { flex: 1; min-width: 0; padding: 6px 8px; font-size: 11px; }
+    .catalog-gen { margin-top: 10px; }
+    .catalog-gen .gen-toggle { width: 100%; padding: 7px 8px; font-size: 12px; }
+    .gen-disabled-hint {
+      display: block;
+      margin-top: 10px;
+      padding: 8px 10px;
+      font-size: 11px;
+      line-height: 1.45;
+      color: var(--muted);
+      background: #f8fafc;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      text-align: center;
+    }
+    .gen-panel {
+      margin-top: 8px;
+      padding: 10px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .gen-label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .gen-panel select { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; margin-bottom: 8px; }
+    .gen-panel-actions { display: flex; gap: 6px; }
+    .gen-panel-actions .btn { flex: 1; padding: 7px 6px; font-size: 11px; }
+    .gen-hint { font-size: 10px; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+    .gen-wizard {
+      margin-top: 10px;
+      padding: 14px;
+      background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+    }
+    .gen-stepper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 14px;
+    }
+    .gen-step-dot {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+      background: #e2e8f0; color: var(--muted);
+      transition: .2s;
+    }
+    .gen-step-dot.active { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(74,156,237,.35); }
+    .gen-step-dot.done { background: #dbeafe; color: var(--primary-dark); }
+    .gen-step-line { width: 28px; height: 2px; background: #e2e8f0; }
+    .gen-step-line.done { background: #bfdbfe; }
+    .gen-step-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--text); }
+    .gen-step-desc { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
+    .gen-qty-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .gen-qty-grid.gen-qty-quick { margin-top: 10px; margin-bottom: 0; }
+    .gen-qty-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .gen-qty-step {
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .gen-qty-step:hover { border-color: var(--primary); color: var(--primary-dark); }
+    .gen-qty-input {
+      flex: 1;
+      min-width: 0;
+      height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .gen-qty-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(74,156,237,.12); }
+    .gen-qty-unit { font-size: 13px; color: var(--muted); white-space: nowrap; }
+    .gen-qty-btn {
+      padding: 10px 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .15s;
+    }
+    .gen-qty-btn:hover { border-color: var(--primary); color: var(--primary-dark); }
+    .gen-qty-btn.selected { border-color: var(--primary); background: var(--sidebar-active); color: var(--primary-dark); }
+    .gen-mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .gen-mode-card {
+      padding: 12px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+      transition: .15s;
+      text-align: left;
+    }
+    .gen-mode-card:hover { border-color: #93c5fd; }
+    .gen-mode-card.selected { border-color: var(--primary); background: #eff6ff; }
+    .gen-mode-card .mode-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .gen-mode-card .mode-desc { font-size: 11px; color: var(--muted); line-height: 1.45; }
+    .gen-mode-card .mode-tag {
+      display: inline-block;
+      margin-top: 8px;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+    .gen-mode-card.selected .mode-tag { background: #dbeafe; color: var(--primary-dark); }
+    .gen-confirm-box {
+      padding: 12px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .gen-confirm-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 12px;
+      border-bottom: 1px dashed #e2e8f0;
+    }
+    .gen-confirm-row:last-child { border-bottom: none; }
+    .gen-confirm-row b { color: var(--text); }
+    .gen-account-box {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      font-size: 11px;
+      color: #92400e;
+      line-height: 1.5;
+    }
+    .gen-wizard-nav { display: flex; gap: 8px; margin-top: 4px; }
+    .gen-wizard-nav .btn { flex: 1; }
+    .gen-toggle { display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .gen-toggle.open { background: var(--sidebar-active); border-color: #93c5fd; color: var(--primary-dark); }
+    .search-results-wrap { margin-bottom: 18px; }
+    .search-results-title { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .catalog-card.selected { outline: 2px solid var(--primary); box-shadow: 0 0 0 3px rgba(74,156,237,.15); }
+    .catalog-select {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 2;
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .catalog-card.has-installed .catalog-select { top: 32px; }
+    .games-list-view { display: none; }
+    .games-list-view.active { display: block; }
+    .games-grid-view.active { display: grid; }
+    .games-grid-view { display: none; }
+    .game-detail-cover {
+      width: 100%;
+      max-height: 160px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      background: #e2e8f0;
+    }
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .meta-row:last-child { border-bottom: none; }
+    .games-status-bar {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .pager {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .pager-info { font-size: 13px; color: var(--muted); margin: 0 8px; }
+
+    /* ===== 表单网格 ===== */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+    .form-grid .field { margin-bottom: 0; }
+    .form-grid .span2 { grid-column: span 2; }
+    .form-grid .actions { grid-column: 1 / -1; }
+
+    /* ===== 弹窗 ===== */
+    .modal {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(15,23,42,.5);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal.show { display: flex; animation: fadeIn .2s; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal-box {
+      background: #fff;
+      border-radius: 16px;
+      max-width: 540px;
+      width: 100%;
+      padding: 0;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.2);
+      animation: slideUp .25s;
+    }
+    @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .modal-head {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-head h3 { font-size: 18px; }
+    .modal-body { padding: 24px; overflow-y: auto; max-height: calc(90vh - 140px); }
+    .modal-foot {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      background: #f8fafc;
+    }
+    .cdk-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+      gap: 10px;
+    }
+
+    /* ===== Toast & Loading ===== */
+    .toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: #0f172a; color: #fff;
+      padding: 14px 20px; border-radius: 12px;
+      display: none; z-index: 200;
+      box-shadow: 0 8px 24px rgba(0,0,0,.2);
+      font-size: 14px;
+      animation: slideUp .3s;
+    }
+    .toast.show { display: block; }
+    .toast.err { background: var(--danger); }
+    .toast.ok { background: var(--ok); }
+
+    #globalLoading {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,.6);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 300;
+    }
+    #globalLoading.show { display: flex; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #e2e8f0;
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 960px) {
+      .two-col { grid-template-columns: 1fr; }
+      .sidebar { position: fixed; z-index: 50; transform: translateX(-100%); transition: transform .25s; }
+      .sidebar.open { transform: translateX(0); }
+      .menu-toggle { display: inline-flex !important; }
+    }
+    .menu-toggle { display: none; }
+    .nav-badge {
+      margin-left: auto;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: var(--danger);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .nav-badge.show { display: inline-flex; }
+    .invite-code { font-family: ui-monospace, monospace; font-size: 12px; letter-spacing: .5px; }
+  </style>
+</head>
+<body>
+  <!-- 主界面 -->
+  <div id="appView">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo">
+          <div class="logo-icon">CS</div>
+          <div>
+            <h2 id="siteName">管理台</h2>
+            <small>Steam CDK System</small>
+          </div>
+        </div>
+      </div>
+      <div class="nav-section">概览</div>
+      <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        仪表盘
+      </div>
+      <div class="nav-section">CDK 中心</div>
+      <div class="nav-item" data-page="cdk" onclick="showPage('cdk')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        CDK 管理
+      </div>
+      <div class="nav-item" data-page="logs" onclick="showPage('logs')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        激活记录
+      </div>
+      <div class="nav-item" data-page="games" onclick="showPage('games')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/></svg>
+        游戏与 CDK
+      </div>
+      <div class="nav-section agent-only-nav hidden">团队</div>
+      <div class="nav-item agent-only-nav hidden" data-page="subagents" onclick="showPage('subagents')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+        下级代理
+      </div>
+      <div class="nav-item agent-only-nav hidden" data-page="wallet" onclick="showPage('wallet')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        我的钱包
+      </div>
+      <div class="nav-section super-only">系统管理</div>
+      <div class="nav-item super-only" data-page="agents" onclick="showPage('agents')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        代理管理
+      </div>
+      <div class="nav-item super-only" data-page="recharge-audit" onclick="showPage('recharge-audit')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M12 15v2M12 11v2"/></svg>
+        充值审核
+        <span class="nav-badge" id="navRechargeBadge">0</span>
+      </div>
+      <div class="nav-item super-only" data-page="withdraw-audit" onclick="showPage('withdraw-audit')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        提现审核
+        <span class="nav-badge" id="navWithdrawBadge">0</span>
+      </div>
+      <div class="nav-item super-only" data-page="reports" onclick="showPage('reports')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+        运营报表
+      </div>
+      <div class="nav-item super-only" data-page="users" onclick="showPage('users')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        用户管理
+      </div>
+      <div class="nav-section">账户</div>
+      <div class="nav-item" data-page="account" onclick="showPage('account')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        个人账户
+      </div>
+      <div class="nav-section super-only">系统</div>
+      <div class="nav-item super-only" data-page="system" onclick="showPage('system')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        站点配置
+      </div>
+      <div class="nav-item super-only" data-page="help-tutorial" onclick="showPage('help-tutorial')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+        激活教程
+      </div>
+      <div class="nav-item super-only" data-page="catalog" onclick="showPage('catalog')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        清单同步
+      </div>
+      <div class="nav-item super-only" data-page="github" onclick="showPage('github')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 7h3a5 5 0 0 1 0 10h-3m-6 0H6a5 5 0 0 1 0-10h3"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        GitHub Token
+      </div>
+      <div class="nav-item super-only" data-page="extensions" onclick="showPage('extensions')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+        扩展功能
+      </div>
+      <div class="sidebar-footer">
+        <div class="user-card">
+          <div class="user-avatar" id="userAvatar">A</div>
+          <div>
+            <div class="name" id="sidebarUser">-</div>
+            <div class="role" id="sidebarRole">-</div>
+          </div>
+        </div>
+        <button class="btn secondary small block" onclick="doLogout()">退出登录</button>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn ghost small menu-toggle" onclick="toggleSidebar()">☰</button>
+          <h1 id="pageTitle">仪表盘</h1>
+          <div class="breadcrumb" id="pageDesc">数据概览与快捷操作</div>
+        </div>
+        <div class="topbar-right">
+          <span class="url-badge" id="topUrl">-</span>
+          <button class="btn secondary small" onclick="refreshCurrentPage()">刷新</button>
+        </div>
+      </header>
+      <div class="content">
+        <div class="content-inner">
+        <!-- 仪表盘 -->
+        <section id="page-dashboard">
+          <div class="stat-grid">
+            <div class="stat-card accent-blue">
+              <div class="label">CDK 总数</div>
+              <div class="value" id="dTotal">-</div>
+              <div class="hint">全部已生成 CDK</div>
+            </div>
+            <div class="stat-card accent-green">
+              <div class="label">未使用</div>
+              <div class="value" id="dUnused">-</div>
+              <div class="hint">可发放给客户</div>
+            </div>
+            <div class="stat-card accent-orange">
+              <div class="label">已使用</div>
+              <div class="value" id="dUsed">-</div>
+              <div class="hint">已完成激活</div>
+            </div>
+            <div class="stat-card accent-purple">
+              <div class="label">今日激活</div>
+              <div class="value" id="dToday">-</div>
+              <div class="hint">今日兑换数量</div>
+            </div>
+            <div class="stat-card accent-purple super-only">
+              <div class="label">待审核充值</div>
+              <div class="value" id="dPendingRecharge">-</div>
+              <div class="hint"><a href="#" onclick="showPage('recharge-audit');return false" style="color:inherit">点击前往审核</a></div>
+            </div>
+            <div class="stat-card accent-blue super-only">
+              <div class="label">代理数量</div>
+              <div class="value" id="dAgents">-</div>
+              <div class="hint">下级代理账号</div>
+            </div>
+            <div class="stat-card accent-blue agent-only hidden">
+              <div class="label">预生成额度</div>
+              <div class="value" id="dQuota">-</div>
+              <div class="progress-bar"><span id="quotaBar" style="width:0%"></span></div>
+            </div>
+            <div class="stat-card accent-green agent-only hidden">
+              <div class="label">账户余额</div>
+              <div class="value" id="dBalance">-</div>
+              <div class="hint" id="dCostHint">我的成本价 -</div>
+            </div>
+            <div class="stat-card accent-purple agent-only hidden">
+              <div class="label">下级代理</div>
+              <div class="value" id="dSubAgents">-</div>
+              <div class="hint">直属团队人数</div>
+            </div>
+          </div>
+
+          <div class="panel super-only" style="margin-bottom:20px">
+            <div class="panel-head"><div><h2>对外服务</h2><p>用户端与运维工具入口</p></div></div>
+            <div class="panel-body">
+              <div class="link-grid">
+                <a class="link-card" href="__PUBLIC_URL__/user-center" target="_blank"><div class="lc-icon">🔍</div><div><div class="lc-title">CDK 查询</div><div class="lc-desc">用户自助查激活状态</div></div></a>
+                <a class="link-card" href="__PUBLIC_URL__/shop" target="_blank"><div class="lc-icon">🛒</div><div><div class="lc-title">卡密商城</div><div class="lc-desc">在线购买 CDK 套餐</div></div></a>
+                <a class="link-card" href="__PUBLIC_URL__/web-box" target="_blank"><div class="lc-icon">📥</div><div><div class="lc-title">Web 入库</div><div class="lc-desc">浏览器轻量入库工具</div></div></a>
+                <a class="link-card" href="#" onclick="showPage('payment');return false"><div class="lc-icon">💳</div><div><div class="lc-title">在线支付</div><div class="lc-desc">支付宝 / 微信 / USDT</div></div></a>
+                <a class="link-card" href="#" onclick="showPage('notify');return false"><div class="lc-icon">🔔</div><div><div class="lc-title">消息通知</div><div class="lc-desc">Telegram / 邮件 / 企微</div></div></a>
+                <a class="link-card" href="#" onclick="showPage('api');return false"><div class="lc-icon">🔌</div><div><div class="lc-title">开放 API</div><div class="lc-desc">第三方对接与 Key 管理</div></div></a>
+              </div>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div class="panel">
+              <div class="panel-head"><div><h2>激活命令</h2><p>复制后发给客户使用</p></div></div>
+              <div class="panel-body">
+                <div class="cmd-grid">
+                  <div class="cmd-block">
+                    <label>标准激活（PowerShell 输入 CDK）</label>
+                    <div class="cmd-row">
+                      <div class="cmd-box" id="cmdInstall">irm __PUBLIC_URL__ | iex</div>
+                      <button class="btn secondary small" onclick="copyText(document.getElementById('cmdInstall').textContent)">复制</button>
+                    </div>
+                  </div>
+                  <div class="cmd-block">
+                    <label>预填 CDK（推荐）</label>
+                    <div class="cmd-row">
+                      <div class="cmd-box" id="cmdCdk">$cdk="XXXX"; irm __PUBLIC_URL__ | iex</div>
+                      <button class="btn secondary small" onclick="copyText(document.getElementById('cmdCdk').textContent)">复制</button>
+                    </div>
+                  </div>
+                  <div class="cmd-block">
+                    <label>仅安装 Hook</label>
+                    <div class="cmd-row">
+                      <div class="cmd-box" id="cmdHook">irm __PUBLIC_URL__/hook | iex</div>
+                      <button class="btn secondary small" onclick="copyText(document.getElementById('cmdHook').textContent)">复制</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <div><h2>最近激活</h2><p>最新 8 条记录</p></div>
+                <button class="btn ghost small" onclick="showPage('logs')">查看全部</button>
+              </div>
+              <div class="panel-body" style="padding:0">
+                <div class="table-wrap" style="border:none;border-radius:0">
+                  <table>
+                    <thead><tr><th>游戏</th><th>CDK</th><th>时间</th></tr></thead>
+                    <tbody id="recentLogs"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CDK 列表 -->
+        <section id="page-cdk" class="hidden">
+          <div class="panel">
+            <div class="panel-head">
+              <div><h2>CDK 列表</h2><p id="cdkListCount">共 0 条</p></div>
+              <div class="btn-group">
+                <button class="btn secondary small" onclick="exportUnused()">导出未使用</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="toolbar">
+                <div class="tabs-inline">
+                  <button class="active" id="tabAll" onclick="setCdkFilter('all')">全部</button>
+                  <button id="tabUnused" onclick="setCdkFilter('unused')">未使用</button>
+                  <button id="tabUsed" onclick="setCdkFilter('used')">已使用</button>
+                </div>
+                <input id="cdkSearch" placeholder="搜索 CDK / 游戏名 / AppID" oninput="renderCdkTable()" />
+                <span class="spacer"></span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>CDK</th><th>游戏</th><th>AppID</th><th>状态</th><th>计费</th>
+                      <th class="super-only">创建者</th><th>创建时间</th><th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cdkTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 激活记录 -->
+        <section id="page-logs" class="hidden">
+          <div class="panel">
+            <div class="panel-head">
+              <div><h2>激活记录</h2><p>所有已兑换 CDK 的历史记录</p></div>
+            </div>
+            <div class="panel-body">
+              <div class="toolbar">
+                <input id="logSearch" placeholder="搜索 CDK / 游戏 / AppID" oninput="renderLogsTable()" />
+                <button class="btn secondary small" onclick="exportLogsCsv()">导出 CSV</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>CDK</th><th>游戏</th><th>AppID</th><th>激活时间</th><th>机器码</th><th class="super-only">创建者</th></tr>
+                  </thead>
+                  <tbody id="logsTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 游戏管理 -->
+        <section id="page-games" class="hidden">
+          <div class="stat-grid" style="margin-bottom:20px">
+            <div class="stat-card accent-blue">
+              <div class="label">Steam 全库</div>
+              <div class="value" id="gTotal">-</div>
+              <div class="hint">约 11 万+ AppID</div>
+            </div>
+            <div class="stat-card accent-green">
+              <div class="label">可入库</div>
+              <div class="value" id="gManifest">-</div>
+              <div class="hint">manifest 源可激活</div>
+            </div>
+            <div class="stat-card accent-orange">
+              <div class="label">已入库</div>
+              <div class="value" id="gInstalled">-</div>
+              <div class="hint">stplug-in 已有</div>
+            </div>
+            <div class="stat-card accent-purple">
+              <div class="label">当前结果</div>
+              <div class="value" id="gFiltered">-</div>
+              <div class="hint">筛选后数量</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>游戏与 CDK</h2>
+                <p id="gamesHint">默认只显示可入库游戏；有「有清单」标记的才能生成 CDK</p>
+              </div>
+              <div class="btn-group">
+                <button class="btn secondary small" onclick="loadGames(true)">同步清单</button>
+                <button class="btn secondary small" onclick="exportGamesPage()">导出本页</button>
+                <button class="btn secondary small" onclick="exportGamesSelected()">导出选中</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="games-status-bar" id="gamesStatusBar">就绪</div>
+              <div class="toolbar">
+                <input id="gameSearch" placeholder="全库搜索（名称/AppID）" style="flex:1;max-width:240px" />
+                <button class="btn" onclick="gameSearchSubmit()">搜索</button>
+                <input id="searchInput" placeholder="Steam 快速搜索" style="flex:1;max-width:200px" />
+                <button class="btn secondary" onclick="doSearch()">Steam 搜索</button>
+                <div class="tabs-inline" id="manifestFilterTabs">
+                  <button data-manifest="all" onclick="setManifestFilter('all')">全库参考</button>
+                  <button class="active" data-manifest="has_manifest" onclick="setManifestFilter('has_manifest')">可入库</button>
+                  <button data-manifest="no_manifest" onclick="setManifestFilter('no_manifest')">无清单</button>
+                </div>
+                <div class="tabs-inline" id="gameFilterTabs">
+                  <button class="active" data-filter="all" onclick="setGameFilter('all')">全部</button>
+                  <button data-filter="installed" onclick="setGameFilter('installed')">已入库</button>
+                  <button data-filter="not_installed" onclick="setGameFilter('not_installed')">未入库</button>
+                </div>
+                <select id="gameSort" onchange="gameSearchSubmit()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                  <option value="appid_desc">AppID ↓</option>
+                  <option value="appid_asc">AppID ↑</option>
+                  <option value="name_asc">名称 A-Z</option>
+                </select>
+                <select id="gamePageSize" onchange="gameSearchSubmit()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                  <option value="24">24/页</option>
+                  <option value="48" selected>48/页</option>
+                  <option value="96">96/页</option>
+                </select>
+                <div class="tabs-inline">
+                  <button class="active" id="viewGridBtn" onclick="setGamesView('grid')">卡片</button>
+                  <button id="viewListBtn" onclick="setGamesView('list')">列表</button>
+                </div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer">
+                  <input type="checkbox" id="gameSelectAll" onchange="toggleSelectAllGames()" /> 全选本页
+                </label>
+              </div>
+              <div id="searchResultsWrap" class="search-results-wrap hidden">
+                <div class="search-results-title">Steam 搜索结果 · 点击卡片下方「生成卡密」</div>
+                <div id="searchResults" class="catalog-grid"></div>
+              </div>
+              <div id="gamesGrid" class="catalog-grid games-grid-view active"></div>
+              <div id="gamesListWrap" class="games-list-view">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width:36px"></th>
+                        <th>封面</th>
+                        <th>AppID</th>
+                        <th>游戏名</th>
+                        <th>状态</th>
+                        <th>来源</th>
+                        <th>操作</th>
+                      </tr>
+                    </thead>
+                    <tbody id="gamesListTable"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="pager" id="gamesPager"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 代理管理 -->
+        <section id="page-agents" class="hidden super-only">
+          <div class="panel">
+            <div class="panel-head"><div><h2>全局定价</h2><p>直推代理的基础 CDK 成本价</p></div></div>
+            <div class="panel-body">
+              <div class="form-grid" style="max-width:520px">
+                <div class="field"><label>直推基础单价（元/CDK）</label><input id="baseCdkPrice" type="number" step="0.01" value="0.1" /></div>
+                <div class="actions"><button class="btn" onclick="saveBasePrice()">保存定价</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>添加代理</h2><p>创建一级代理并设置成本价</p></div></div>
+            <div class="panel-body">
+              <div class="form-grid">
+                <div class="field"><label>用户名</label><input id="agentUser" placeholder="至少 3 位" /></div>
+                <div class="field"><label>密码</label><input id="agentPass" type="password" placeholder="至少 6 位" /></div>
+                <div class="field"><label>显示名称</label><input id="agentName" placeholder="可选" /></div>
+                <div class="field"><label>CDK 成本单价</label><input id="agentPrice" type="number" step="0.01" value="0.1" /></div>
+                <input id="agentQuota" type="hidden" value="0" />
+                <div class="field span2"><label>备注</label><input id="agentNote" placeholder="可选备注" /></div>
+                <div class="actions"><button class="btn" onclick="createAgent()">创建代理</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <div><h2>代理列表</h2><p>含一级代理与邀请注册的下级代理，均可充值与编辑</p></div>
+              <div class="tabs-inline" id="agentFilterTabs">
+                <button type="button" class="active" data-filter="all" onclick="setAgentFilter('all')">全部</button>
+                <button type="button" data-filter="top" onclick="setAgentFilter('top')">一级代理</button>
+                <button type="button" data-filter="sub" onclick="setAgentFilter('sub')">下级代理</button>
+              </div>
+            </div>
+            <div class="panel-body" style="padding:0">
+              <div class="table-wrap" style="border:none">
+                <table>
+                  <thead>
+                    <tr><th>用户名</th><th>名称</th><th>上级</th><th>邀请码</th><th>成本价</th><th>余额</th><th>已生成</th><th>下级</th><th>状态</th><th>操作</th></tr>
+                  </thead>
+                  <tbody id="agentsTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 充值审核（超管） -->
+        <section id="page-recharge-audit" class="hidden super-only">
+          <div class="panel">
+            <div class="panel-head">
+              <div><h2>充值申请审核</h2><p>对应前台代理「账户充值」提交的申请，审核通过后自动到账</p></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <button class="btn secondary small" onclick="batchReviewRecharge('approve')">批量通过</button>
+                <button class="btn danger small" onclick="batchReviewRecharge('reject')">批量拒绝</button>
+                <button class="btn secondary small" onclick="exportRechargeCsv()">导出 CSV</button>
+                <div class="tabs-inline" id="rcAuditTabs">
+                <button class="active" data-filter="pending" onclick="setRcAuditFilter('pending')">待审核</button>
+                <button data-filter="all" onclick="setRcAuditFilter('all')">全部</button>
+                <button data-filter="approved" onclick="setRcAuditFilter('approved')">已通过</button>
+                <button data-filter="rejected" onclick="setRcAuditFilter('rejected')">已拒绝</button>
+              </div>
+            </div>
+            <div class="panel-body" style="padding:0">
+              <div class="table-wrap" style="border:none">
+                <table>
+                  <thead>
+                    <tr><th><input type="checkbox" id="rcAuditCheckAll" onchange="toggleRcAuditAll(this.checked)" /></th><th>时间</th><th>代理</th><th>类型</th><th>数量</th><th>备注/凭证</th><th>状态</th><th>操作</th></tr>
+                  </thead>
+                  <tbody id="rcAuditTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>充值操作日志</h2><p>超管/代理手动充值与审核到账记录</p></div></div>
+            <div class="panel-body" style="padding:0">
+              <div class="table-wrap" style="border:none">
+                <table>
+                  <thead>
+                    <tr><th>时间</th><th>目标代理</th><th>操作者</th><th>余额</th><th>备注</th></tr>
+                  </thead>
+                  <tbody id="rcLogsTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 提现审核 -->
+        <section id="page-withdraw-audit" class="hidden super-only">
+          <div class="panel">
+            <div class="panel-head">
+              <div><h2>提现申请审核</h2><p>代理从分润余额申请提现，通过后扣减余额</p></div>
+              <div style="display:flex;gap:8px">
+                <button class="btn secondary small" onclick="batchReviewWithdraw('approve')">批量通过</button>
+                <button class="btn danger small" onclick="batchReviewWithdraw('reject')">批量拒绝</button>
+              </div>
+            </div>
+            <div class="panel-body" style="padding:0">
+              <div class="table-wrap" style="border:none">
+                <table>
+                  <thead><tr><th><input type="checkbox" id="wdAuditCheckAll" onchange="toggleWdAuditAll(this.checked)" /></th><th>时间</th><th>代理</th><th>金额</th><th>收款信息</th><th>备注</th><th>状态</th><th>操作</th></tr></thead>
+                  <tbody id="wdAuditTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 运营报表 -->
+        <section id="page-reports" class="hidden super-only">
+          <div class="stat-grid" id="reportStats"></div>
+          <div class="two-col">
+            <div class="panel">
+              <div class="panel-head"><div><h2>今日代理排行</h2><p>按激活数量</p></div></div>
+              <div class="panel-body" style="padding:0"><div class="table-wrap" style="border:none"><table><thead><tr><th>代理</th><th>今日激活</th><th>累计生成</th><th>余额</th></tr></thead><tbody id="reportAgents"></tbody></table></div></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><div><h2>今日热门游戏</h2></div></div>
+              <div class="panel-body" style="padding:0"><div class="table-wrap" style="border:none"><table><thead><tr><th>AppID</th><th>游戏</th><th>激活数</th></tr></thead><tbody id="reportGames"></tbody></table></div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>代理树</h2><p>直属关系结构</p></div></div>
+            <div class="panel-body"><pre id="agentTreeView" style="white-space:pre-wrap;font-size:12px;background:#f8fafc;padding:12px;border-radius:8px;max-height:360px;overflow:auto">加载中…</pre></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>操作审计</h2><p>最近 100 条</p></div></div>
+            <div class="panel-body" style="padding:0"><div class="table-wrap" style="border:none"><table><thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>详情</th></tr></thead><tbody id="auditLogsTable"></tbody></table></div></div>
+          </div>
+        </section>
+
+        <!-- 下级代理（代理自用） -->
+        <section id="page-subagents" class="hidden agent-only-nav">
+          <div class="panel">
+            <div class="panel-head">
+              <div><h2>邀请下级代理</h2><p id="subAgentHint">给下级设置的 CDK 成本价需 ≥ 您的成本价，下级每生成 CDK 您获得差价利润</p></div>
+            </div>
+            <div class="panel-body">
+              <div class="form-grid">
+                <div class="field"><label>用户名</label><input id="subUser" placeholder="至少 3 位" /></div>
+                <div class="field"><label>密码</label><input id="subPass" type="password" placeholder="至少 6 位" /></div>
+                <div class="field"><label>显示名称</label><input id="subName" placeholder="可选" /></div>
+                <div class="field"><label>下级 CDK 成本单价</label><input id="subPrice" type="number" step="0.01" placeholder="如 0.15" /></div>
+                <input id="subQuota" type="hidden" value="0" />
+                <div class="field span2"><label>备注</label><input id="subNote" placeholder="可选" /></div>
+                <div class="actions"><button class="btn" onclick="createSubAgent()">邀请下级</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>我的下级</h2></div></div>
+            <div class="panel-body" style="padding:0">
+              <div class="table-wrap" style="border:none">
+                <table>
+                  <thead>
+                    <tr><th>用户名</th><th>名称</th><th>成本价</th><th>余额</th><th>已生成</th><th>状态</th><th>操作</th></tr>
+                  </thead>
+                  <tbody id="subAgentsTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 我的钱包 -->
+        <section id="page-wallet" class="hidden agent-only-nav">
+          <div class="stat-grid" style="margin-bottom:20px">
+            <div class="stat-card accent-green">
+              <div class="label">账户余额</div>
+              <div class="value" id="wBalance">-</div>
+              <div class="hint">下级生成 CDK 自动入账</div>
+            </div>
+            <div class="stat-card accent-blue">
+              <div class="label">我的成本价</div>
+              <div class="value" id="wCost">-</div>
+              <div class="hint">每个 CDK 您的成本</div>
+            </div>
+            <div class="stat-card accent-purple">
+              <div class="label">下级人数</div>
+              <div class="value" id="wSubCount">-</div>
+              <div class="hint">直属下级代理</div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>分润记录</h2><p>最近 20 条</p></div></div>
+            <div class="panel-body" style="padding:0">
+              <div class="table-wrap" style="border:none">
+                <table>
+                  <thead>
+                    <tr><th>时间</th><th>来源下级</th><th>CDK 数量</th><th>单个差价</th><th>入账金额</th></tr>
+                  </thead>
+                  <tbody id="walletLogs"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 用户管理 -->
+        <section id="page-users" class="hidden super-only">
+          <div class="panel">
+            <div class="panel-head"><div><h2>添加管理员</h2><p>仅创建超级管理员；代理账号请到「代理管理」添加</p></div></div>
+            <div class="panel-body">
+              <div class="form-grid">
+                <div class="field"><label>用户名</label><input id="newUser" /></div>
+                <div class="field"><label>密码</label><input id="newPass" type="password" /></div>
+                <div class="field"><label>显示名称</label><input id="newName" /></div>
+                <div class="actions"><button class="btn" onclick="createUser()">创建管理员</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>管理员列表</h2><p>仅显示超级管理员账号</p></div></div>
+            <div class="panel-body" style="padding:0">
+              <div class="table-wrap" style="border:none">
+                <table>
+                  <thead>
+                    <tr><th>用户名</th><th>名称</th><th>状态</th><th>创建时间</th><th>操作</th></tr>
+                  </thead>
+                  <tbody id="usersTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 个人账户 -->
+        <section id="page-account" class="hidden">
+          <div class="panel">
+            <div class="panel-head"><div><h2>修改密码</h2><p>建议定期更换</p></div></div>
+            <div class="panel-body" style="max-width:480px">
+              <div class="field"><label>原密码</label><input id="oldPass" type="password" /></div>
+              <div class="field"><label>新密码</label><input id="newPass2" type="password" /></div>
+              <div class="field"><label>确认新密码</label><input id="newPass3" type="password" /></div>
+              <button class="btn" onclick="changePassword()">保存密码</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h2>账号信息</h2></div></div>
+            <div class="panel-body form-grid-2" style="max-width:640px">
+              <div class="field"><label>用户名</label><input id="setUser" readonly style="background:#f8fafc" /></div>
+              <div class="field"><label>角色</label><input id="setRole" readonly style="background:#f8fafc" /></div>
+              <div class="field"><label>显示名称</label><input id="setName" readonly style="background:#f8fafc" /></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 站点配置 -->
+        <section id="page-system" class="hidden super-only">
+          <div class="panel">
+            <div class="panel-head"><div><h2>站点与业务</h2><p>公告、CDK 与分润策略</p></div></div>
+            <div class="panel-body">
+              <div class="form-grid-2" style="max-width:720px">
+                <div class="field"><label>站点名称</label><input id="setSiteName" /></div>
+                <input id="registerDefaultQuota" type="hidden" value="0" />
+                <div class="field"><label>CDK 默认有效期（天，0=永久）</label><input id="cdkDefaultExpire" type="number" min="0" value="0" /></div>
+                <div class="field"><label>分润向上级联层数（0=无限）</label><input id="commissionMaxLevels" type="number" min="0" value="0" /></div>
+                <div class="field" style="grid-column:1/-1"><label>公告内容</label><textarea id="setAnnouncement" rows="3"></textarea></div>
+                <div class="field"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="setAnnouncementEnabled" /> 启用公告</label></div>
+              </div>
+              <button class="btn" style="margin-top:8px" onclick="saveSystemSettings()">保存系统设置</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- 激活教程 -->
+        <section id="page-help-tutorial" class="hidden super-only">
+          <div class="help-editor-toolbar">
+            <div class="toolbar-left">
+              <h2>激活教程编辑</h2>
+              <p>配置前台 <a href="/help" target="_blank" rel="noopener">/help</a> 页面内容 · 配图目录 <code>/static/help/</code></p>
+            </div>
+            <div class="toolbar-actions">
+              <label class="enable-toggle"><input type="checkbox" id="helpEnabled" checked /> 启用教程页</label>
+              <a class="btn secondary small" href="/help" target="_blank" rel="noopener">预览</a>
+              <button class="btn small" onclick="saveHelpTutorial()">保存全部</button>
+            </div>
+          </div>
+
+          <div class="page-layout">
+            <nav class="side-nav" id="helpSideNav">
+              <button type="button" class="side-nav-item active" data-help-tab="hero" onclick="switchHelpTab('hero')"><span class="icon">🏠</span>页面头部</button>
+              <button type="button" class="side-nav-item" data-help-tab="install" onclick="switchHelpTab('install')"><span class="icon">📦</span>安装下载</button>
+              <button type="button" class="side-nav-item" data-help-tab="cmd" onclick="switchHelpTab('cmd')"><span class="icon">⌨️</span>活动口令</button>
+              <button type="button" class="side-nav-item" data-help-tab="steps" onclick="switchHelpTab('steps')"><span class="icon">📋</span>分步教程</button>
+              <button type="button" class="side-nav-item" data-help-tab="tips" onclick="switchHelpTab('tips')"><span class="icon">💡</span>提示内容</button>
+              <button type="button" class="side-nav-item" data-help-tab="footer" onclick="switchHelpTab('footer')"><span class="icon">🔗</span>轮播页脚</button>
+            </nav>
+
+            <div id="helpPanels">
+              <!-- 页面头部 -->
+              <div id="help-tab-hero" class="ui-tab-panel active">
+                <div class="panel">
+                  <div class="panel-head"><div><h2>页面头部</h2><p>标题、导航与首屏文案</p></div></div>
+                  <div class="panel-body">
+                    <div class="form-section">
+                      <div class="form-section-title">基础信息</div>
+                      <div class="form-grid-2">
+                        <div class="field"><label>浏览器标题</label><input id="helpPageTitle" /></div>
+                        <div class="field"><label>导航品牌名</label><input id="helpNavBrand" /></div>
+                        <div class="field"><label>顶部徽章</label><input id="helpHeroBadge" /></div>
+                        <div class="field" style="grid-column:1/-1"><label>主标题</label><input id="helpHeroTitle" /></div>
+                        <div class="field" style="grid-column:1/-1"><label>副标题</label><textarea id="helpHeroSubtitle" rows="2"></textarea></div>
+                      </div>
+                    </div>
+                    <div class="form-section">
+                      <div class="form-section-title">密码验证弹窗（可选）</div>
+                      <div class="form-grid-2">
+                        <div class="field" style="grid-column:1/-1"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="helpGateEnabled" /> 打开页面前需输入密码</label></div>
+                        <div class="field"><label>弹窗标题</label><input id="helpGateTitle" /></div>
+                        <div class="field"><label>访问密码</label><input id="helpGateSecret" type="password" autocomplete="new-password" /></div>
+                        <div class="field" style="grid-column:1/-1"><label>弹窗说明</label><textarea id="helpGateDesc" rows="2"></textarea></div>
+                        <div class="field" style="grid-column:1/-1"><label>验证成功后跳转（留空不跳转）</label><input id="helpGateRedirect" placeholder="https://..." /></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 安装下载 -->
+              <div id="help-tab-install" class="ui-tab-panel">
+                <div class="panel">
+                  <div class="panel-head"><div><h2>安装下载区</h2><p>推荐一键安装程序与手动步骤分隔线</p></div></div>
+                  <div class="panel-body">
+                    <div class="form-section">
+                      <div class="form-section-title">一键安装</div>
+                      <div class="form-grid-2">
+                        <div class="field" style="grid-column:1/-1"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="helpInstallerEnabled" checked /> 显示安装程序区块</label></div>
+                        <div class="field"><label>区块标题</label><input id="helpInstallerTitle" /></div>
+                        <div class="field"><label>手动步骤分隔文字</label><input id="helpManualDivider" /></div>
+                        <div class="field" style="grid-column:1/-1"><label>说明</label><textarea id="helpInstallerDesc" rows="2"></textarea></div>
+                        <div class="field"><label>下载按钮文字</label><input id="helpInstallerBtn" /></div>
+                        <div class="field"><label>下载链接</label><input id="helpInstallerUrl" placeholder="/static/SteamSetup.exe" /></div>
+                        <div class="field"><label>第二按钮文字</label><input id="helpInstallerBtn2" /></div>
+                        <div class="field"><label>第二按钮链接</label><input id="helpInstallerBtn2Url" placeholder="#steps" /></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 活动口令 -->
+              <div id="help-tab-cmd" class="ui-tab-panel">
+                <div class="panel">
+                  <div class="panel-head"><div><h2>活动口令</h2><p>用户在 PowerShell 中复制执行的命令</p></div></div>
+                  <div class="panel-body">
+                    <div class="form-section">
+                      <div class="form-section-title">主口令</div>
+                      <div class="form-grid-2">
+                        <div class="field"><label>终端前缀</label><input id="helpPrimaryLabel" placeholder="PS>" /></div>
+                        <div class="field"><label>主口令</label><input id="helpPrimaryCmd" placeholder="irm steamo.icu|iex" style="font-family:ui-monospace,monospace" /></div>
+                      </div>
+                      <div class="hint-box">请使用你们自己的域名，例如 <code>irm steamo.icu|iex</code>。不要使用 steam.run 等第三方口令。</div>
+                    </div>
+                    <div class="form-section">
+                      <div class="form-section-title">备用口令</div>
+                      <div id="helpFallbackEditor"></div>
+                      <button type="button" class="btn secondary small" onclick="addHelpFallback()">+ 添加备用口令</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 分步教程 -->
+              <div id="help-tab-steps" class="ui-tab-panel">
+                <div class="panel">
+                  <div class="panel-head">
+                    <div><h2>分步教程</h2><p>按顺序展示激活步骤，每步可配多张配图</p></div>
+                    <button type="button" class="btn secondary small" onclick="addHelpStep()">+ 添加步骤</button>
+                  </div>
+                  <div class="panel-body">
+                    <div class="field" style="max-width:360px;margin-bottom:16px"><label>步骤区总标题</label><input id="helpStepsTitle" /></div>
+                    <div class="hint-box" style="margin-top:0;margin-bottom:16px">配图上传到 <code>/static/help/</code> 后填写 URL，如 <code>/static/help/step1.png</code></div>
+                    <div id="helpStepsEditor" class="help-steps-wrap"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 提示内容 -->
+              <div id="help-tab-tips" class="ui-tab-panel">
+                <div class="panel">
+                  <div class="panel-head"><div><h2>提示内容</h2><p>注意事项与小贴士卡片</p></div></div>
+                  <div class="panel-body">
+                    <div class="form-section">
+                      <div class="form-section-title">注意事项</div>
+                      <div class="form-grid-2">
+                        <div class="field"><label>标题</label><input id="helpNoticesTitle" /></div>
+                        <div class="field" style="grid-column:1/-1"><label>内容（每行一条）</label><textarea id="helpNotices" rows="4"></textarea></div>
+                      </div>
+                    </div>
+                    <div class="form-section">
+                      <div class="form-section-title">小贴士</div>
+                      <div class="form-grid-2">
+                        <div class="field"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="helpTipsEnabled" checked /> 显示小贴士区块</label></div>
+                        <div class="field"><label>区块标题</label><input id="helpTipsSection" /></div>
+                        <div class="field"><label>卡片标签</label><input id="helpTipsCard" /></div>
+                        <div class="field"><label>小贴士标题</label><input id="helpTipsHeading" /></div>
+                        <div class="field" style="grid-column:1/-1"><label>正文</label><textarea id="helpTipsBody" rows="3"></textarea></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 轮播页脚 -->
+              <div id="help-tab-footer" class="ui-tab-panel">
+                <div class="panel">
+                  <div class="panel-head"><div><h2>轮播与页脚</h2><p>顶部轮播、底部链接与版权文字</p></div></div>
+                  <div class="panel-body">
+                    <div class="form-section">
+                      <div class="form-section-title">顶部轮播</div>
+                      <div class="field"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="helpCarouselEnabled" /> 启用顶部轮播图</label></div>
+                      <div id="helpCarouselEditor"></div>
+                      <button type="button" class="btn secondary small" onclick="addHelpCarousel()">+ 添加轮播图</button>
+                    </div>
+                    <div class="form-section">
+                      <div class="form-section-title">更多资源链接</div>
+                      <div class="field"><label>区块标题</label><input id="helpExtraTitle" /></div>
+                      <div id="helpLinksEditor"></div>
+                      <button type="button" class="btn secondary small" onclick="addHelpLink()">+ 添加链接</button>
+                    </div>
+                    <div class="form-section">
+                      <div class="form-section-title">页脚</div>
+                      <div class="field"><label>页脚文字</label><input id="helpFooter" /></div>
+                      <button class="btn" onclick="saveHelpTutorial()">保存全部</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 清单同步 -->
+        <section id="page-catalog" class="hidden super-only">
+          <div class="panel">
+            <div class="panel-head"><div><h2>游戏清单自动同步</h2><p>GitHub 全量抓取 + Steam 11 万库</p></div></div>
+            <div class="panel-body">
+              <div id="catalogSyncStatus" class="hint-box" style="margin-top:0;margin-bottom:16px">加载中…</div>
+              <div class="form-grid-2" style="max-width:520px">
+                <div class="field"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="catalogAutoSync" checked /> 启用自动同步</label></div>
+                <div class="field"><label>自动同步间隔（小时）</label><input id="catalogAutoSyncHours" type="number" min="1" max="168" value="24" /></div>
+                <div class="field" style="grid-column:1/-1"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="catalogMergeOnSync" checked /> 合并模式（只新增，不覆盖）</label></div>
+              </div>
+              <div class="btn-group" style="margin-top:12px">
+                <button class="btn" onclick="runCatalogSyncNow()">立即同步</button>
+                <button class="btn secondary" onclick="saveCatalogSyncSettings()">保存设置</button>
+                <button class="btn secondary" onclick="enrichAllManifestMeta()">补齐全部名称封面</button>
+              </div>
+              <p style="font-size:11px;color:var(--muted);margin-top:8px">同步清单后会自动补齐最多 400 款；也可手动批量拉取<strong>中文名/英文名/头图</strong></p>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:16px">
+            <div class="panel-head"><div><h2>单独添加游戏</h2><p>将 AppID 加入可入库清单，即可在游戏库搜索并生成 CDK</p></div></div>
+            <div class="panel-body">
+              <div class="hint-box" style="margin-top:0;margin-bottom:14px">
+                <strong>参数说明</strong><br>
+                · <code>appid</code>（必填）：Steam 主游戏 AppID，须为数字<br>
+                · <code>name</code>（可选）：显示名称，留空则从 Steam 自动拉取<br>
+                · <code>探测入库</code>：检查 GitHub / Sudama 是否有清单（推荐开启）<br>
+                · <code>强制加入</code>：探测失败也写入清单（仅方便发卡，<strong>客户激活可能失败</strong>）<br>
+                · <code>生成 lua</code>：勾选后在服务端 <code>Steam/config/stplug-in</code> 真正入库（需 config.json 里 <code>Custom_Steam_Path</code> + GitHub Token + 清单源有该游戏）<br>
+                <span style="color:var(--muted)">DLC / 升级包请填主游戏 AppID，不要填 DLC 编号。</span>
+              </div>
+              <div class="form-grid-2" style="max-width:560px">
+                <div class="field"><label>AppID *</label><input id="manualGameAppid" placeholder="例如 3768760" inputmode="numeric" /></div>
+                <div class="field"><label>游戏名称（可选）</label><input id="manualGameName" placeholder="留空自动从 Steam 获取" /></div>
+                <div class="field" style="grid-column:1/-1">
+                  <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><input type="checkbox" id="manualGameProbe" checked /> 添加前探测是否可入库</label>
+                  <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="manualGameForce" /> 强制加入（无清单也显示，激活可能失败）</label>
+                  <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="manualGameTryImport" /> 加入后服务端预入库（生成 .lua / .st）</label>
+                </div>
+              </div>
+              <div id="manualGamePreview" class="hint-box hidden" style="margin-top:14px"></div>
+              <div class="btn-group" style="margin-top:12px">
+                <button class="btn secondary" type="button" onclick="previewManualGame()">探测 / 预览</button>
+                <button class="btn secondary" type="button" onclick="enrichManualGameMeta()">补齐名称封面</button>
+                <button class="btn" type="button" onclick="addManualGame()">加入游戏库</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- GitHub Token -->
+        <section id="page-github" class="hidden super-only">
+          <div class="panel">
+            <div class="panel-head"><div><h2>GitHub Token</h2><p>多 Token 轮询，叠加 GitHub API 调用额度</p></div></div>
+            <div class="panel-body">
+              <div style="margin-bottom:14px">
+                <span id="ghTokenStatus" class="tag off">未配置</span>
+                <span id="ghTokenCount" style="margin-left:10px;font-size:13px;color:var(--muted)"></span>
+              </div>
+              <div id="ghTokenList" style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.8"></div>
+              <div class="field">
+                <label>Personal Access Token（每行一个）</label>
+                <textarea id="ghTokenInput" rows="4" placeholder="ghp_xxxxxxxx&#10;github_pat_xxxxxxxx" autocomplete="off" style="width:100%;font-family:monospace;font-size:13px;padding:10px;border:1px solid var(--border);border-radius:8px;resize:vertical"></textarea>
+              </div>
+              <div class="hint-box">在 GitHub → Developer settings → Personal access tokens 创建，建议 <code>public_repo</code> 只读。每个 Token 约 5000 次/小时。</div>
+              <div class="btn-group">
+                <button class="btn" onclick="saveGitHubToken()">保存 Token</button>
+                <button class="btn secondary" onclick="clearGitHubToken()">清除全部</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 扩展功能（页内子导航） -->
+        <section id="page-extensions" class="hidden super-only">
+          <div class="page-layout">
+            <nav class="side-nav" id="extSideNav"></nav>
+            <div id="extPanels">
+              <div id="ext-payment" class="ui-tab-panel active">
+                <div class="panel"><div class="panel-head"><div><h2>GoPay 在线支付</h2><p>易支付 V1（MD5）· <a href="https://pay.maihao.la/doc#epay-v1" target="_blank" rel="noopener">对接文档</a></p></div></div>
+                  <div class="panel-body">
+                    <div class="form-section">
+                      <div class="form-section-title">GoPay / 易支付</div>
+                      <label><input type="checkbox" id="epay_enabled" /> 启用在线支付（支付宝）</label>
+                      <div class="form-grid-2">
+                        <div class="field"><label>网关地址</label><input id="epay_gateway" placeholder="https://pay.maihao.la" /></div>
+                        <div class="field"><label>商户号 PID</label><input id="epay_pid" placeholder="商户后台查看" /></div>
+                        <div class="field" style="grid-column:1/-1"><label>MD5 密钥</label><input id="epay_md5_key" type="password" autocomplete="new-password" placeholder="V1 接口 MD5 Key" /></div>
+                        <div class="field"><label>支付方式 type</label>
+                          <select id="epay_pay_type">
+                            <option value="alipay">alipay（自动 PC/H5）</option>
+                            <option value="alipay_pc">alipay_pc（电脑网站）</option>
+                            <option value="alipay_h5">alipay_h5（手机网站）</option>
+                            <option value="alipay_face">alipay_face（当面付/扫码）</option>
+                          </select>
+                        </div>
+                        <div class="field"><label>收银台模式</label>
+                          <select id="epay_checkout_mode">
+                            <option value="cashier">GoPay 收银台（推荐）</option>
+                            <option value="direct">直连支付宝</option>
+                          </select>
+                        </div>
+                        <div class="hint-box" style="margin-top:8px;font-size:12px;color:var(--muted)">
+                          推荐选 <code>alipay</code>（自动 PC/H5）。<code>alipay_face</code> 需商户开通当面付，否则会提示「创建订单失败」。
+                        </div>
+                        <div class="field" style="grid-column:1/-1"><label>平台 RSA 公钥（可选）</label><textarea id="epay_platform_public_key" rows="4" placeholder="RSA 异步通知验签用，MD5 模式可留空"></textarea></div>
+                      </div>
+                      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+                        <button class="btn" onclick="saveExtSection('payment')">保存配置</button>
+                        <button class="btn secondary" onclick="testEpayConnection()">测试连接</button>
+                      </div>
+                      <div class="hint-box" style="margin-top:12px">
+                        异步通知：<code id="epayNotifyUrl">/api/payment/epay/notify</code><br/>
+                        同步跳转：<code id="epayReturnUrl">/api/payment/epay/return</code><br/>
+                        收银台页面：<code id="epayCashierUrl">/pay</code><br/>
+                        请在 GoPay 商户后台将上述地址配置为 notify_url / return_url（保存后自动拼接域名）。
+                      </div>
+                      <pre id="epay_test_result" class="hint-box hidden" style="margin-top:8px;white-space:pre-wrap"></pre>
+                    </div>
+                    <div class="form-section" style="margin-top:20px">
+                      <div class="form-section-title">USDT 收款（可选）</div>
+                      <label><input type="checkbox" id="pay_usdt" /> 启用 USDT 手动收款</label>
+                      <div class="form-grid-2">
+                        <div class="field"><label>USDT 地址</label><input id="usdt_address" /></div>
+                        <div class="field"><label>USDT 汇率</label><input id="usdt_rate" type="number" step="0.01" /></div>
+                      </div>
+                    </div>
+                    <div class="form-section" style="margin-top:20px">
+                      <div class="form-section-title">自定义 Webhook（可选）</div>
+                      <div class="field"><label>回调签名密钥</label><input id="callback_secret" placeholder="第三方手动回调用" /></div>
+                      <div class="hint-box">自定义回调 <code>POST /api/payment/callback</code> · Header: <code>X-Payment-Signature</code></div>
+                    </div>
+                  </div></div>
+              </div>
+              <div id="ext-notify" class="ui-tab-panel">
+                <div class="panel"><div class="panel-head"><div><h2>消息通知</h2></div></div>
+                  <div class="panel-body">
+                    <div class="form-section"><div class="form-section-title">Telegram</div>
+                      <label><input type="checkbox" id="tg_en" /> 启用</label>
+                      <div class="form-grid-2"><div class="field"><label>Bot Token</label><input id="tg_token" /></div><div class="field"><label>Chat ID</label><input id="tg_chat" /></div></div>
+                    </div>
+                    <div class="form-section"><div class="form-section-title">企业微信</div>
+                      <label><input type="checkbox" id="wecom_en" /> 启用 Webhook</label>
+                      <div class="field"><label>Webhook URL</label><input id="wecom_url" /></div>
+                    </div>
+                    <div class="form-section"><div class="form-section-title">邮件 SMTP</div>
+                      <label><input type="checkbox" id="email_en" /> 启用</label>
+                      <div class="form-grid-2">
+                        <div class="field"><label>主机</label><input id="smtp_host" /></div>
+                        <div class="field"><label>端口</label><input id="smtp_port" type="number" /></div>
+                        <div class="field"><label>用户</label><input id="smtp_user" /></div>
+                        <div class="field"><label>密码</label><input id="smtp_pass" type="password" /></div>
+                        <div class="field" style="grid-column:1/-1"><label>发件人</label><input id="smtp_from" /></div>
+                      </div>
+                    </div>
+                    <div class="btn-group"><button class="btn" onclick="saveExtSection('notifications')">保存</button><button class="btn secondary" onclick="testExtNotify()">测试通知</button></div>
+                  </div></div>
+              </div>
+              <div id="ext-security" class="ui-tab-panel">
+                <div class="panel"><div class="panel-head"><div><h2>安全策略</h2></div></div>
+                  <div class="panel-body">
+                    <label><input type="checkbox" id="ip_en" /> 启用 IP 白名单</label>
+                    <div class="field"><label>白名单（每行一个）</label><textarea id="ip_list" rows="3"></textarea></div>
+                    <label><input type="checkbox" id="confirm_pwd" checked /> 敏感操作需 confirm_password</label>
+                    <button class="btn" onclick="saveExtSection('security')">保存</button>
+                    <div class="form-section" style="margin-top:24px"><div class="form-section-title">两步验证 (2FA)</div>
+                      <div class="btn-group"><button class="btn secondary" onclick="setup2fa()">获取密钥</button><button class="btn" onclick="enable2fa()">启用</button><button class="btn secondary" onclick="disable2fa()">关闭</button></div>
+                      <div class="field"><label>验证码</label><input id="totp_code" /></div>
+                      <pre class="output-box" id="twofa_info"></pre>
+                    </div>
+                  </div></div>
+              </div>
+              <div id="ext-api" class="ui-tab-panel">
+                <div class="panel"><div class="panel-head"><div><h2>开放 API</h2><p>/api/v1/ · Bearer csk_xxx</p></div></div>
+                  <div class="panel-body">
+                    <div class="form-grid-2"><div class="field"><label>Key 名称</label><input id="api_name" value="default" /></div></div>
+                    <button class="btn" onclick="createApiKey()">创建 API Key</button>
+                    <pre class="output-box" id="api_key_result"></pre>
+                    <pre class="output-box" id="api_list"></pre>
+                  </div></div>
+              </div>
+              <div id="ext-tenant" class="ui-tab-panel">
+                <div class="panel"><div class="panel-head"><div><h2>多租户</h2></div></div>
+                  <div class="panel-body">
+                    <label><input type="checkbox" id="tenant_en" /> 启用多域名</label>
+                    <div class="form-grid-2"><div class="field"><label>站点名</label><input id="t_name" /></div><div class="field"><label>域名</label><input id="t_domain" /></div></div>
+                    <div class="btn-group"><button class="btn" onclick="addTenantSite()">添加</button><button class="btn secondary" onclick="saveExtSection('tenants')">保存开关</button></div>
+                    <pre class="output-box" id="tenant_list"></pre>
+                  </div></div>
+              </div>
+              <div id="ext-mall" class="ui-tab-panel">
+                <div class="panel"><div class="panel-head"><div><h2>CDK 商城</h2><p>/shop</p></div></div>
+                  <div class="panel-body">
+                    <label><input type="checkbox" id="mall_en" /> 启用商城</label>
+                    <div class="form-grid-2">
+                      <div class="field"><label>套餐名</label><input id="pkg_name" /></div>
+                      <div class="field"><label>AppID</label><input id="pkg_appid" /></div>
+                      <div class="field"><label>价格</label><input id="pkg_price" type="number" /></div>
+                      <div class="field"><label>有效天数</label><input id="pkg_days" type="number" /></div>
+                    </div>
+                    <div class="btn-group"><button class="btn" onclick="saveExtPackage()">保存套餐</button><button class="btn secondary" onclick="saveExtSection('mall')">保存商城</button></div>
+                    <pre class="output-box" id="pkg_list"></pre>
+                    <div class="form-section"><div class="form-section-title">批量导入 CDK</div>
+                      <div class="field"><label>AppID</label><input id="batch_appid" /></div>
+                      <div class="field"><label>每行一个 CDK</label><textarea id="batch_lines" rows="4"></textarea></div>
+                      <button class="btn" onclick="batchImportCdk()">导入</button>
+                    </div>
+                  </div></div>
+              </div>
+              <div id="ext-stats" class="ui-tab-panel">
+                <div class="panel"><div class="panel-head"><div><h2>数据统计</h2></div></div>
+                  <div class="panel-body">
+                    <div class="btn-group"><button class="btn" onclick="loadExtCharts()">刷新</button><button class="btn secondary" onclick="exportExtCsv()">导出 CSV</button></div>
+                    <pre class="output-box" id="charts_data" style="max-height:360px"></pre>
+                  </div></div>
+              </div>
+              <div id="ext-sync-webhook" class="ui-tab-panel">
+                <div class="panel"><div class="panel-head"><div><h2>清单 Webhook</h2></div></div>
+                  <div class="panel-body">
+                    <div class="hint-box">GET <code>/api/webhook/catalog-sync?secret=密钥</code></div>
+                    <button class="btn secondary" onclick="pollExtSync()">刷新同步进度</button>
+                    <pre class="output-box" id="sync_prog"></pre>
+                  </div></div>
+              </div>
+              <div id="ext-agent-billing" class="ui-tab-panel">
+                <div class="panel"><div class="panel-head"><div><h2>代理信用 / 发票</h2></div></div>
+                  <div class="panel-body">
+                    <div class="form-grid-2">
+                      <div class="field"><label>代理 user_id</label><input id="credit_uid" /></div>
+                      <div class="field"><label>信用额度</label><input id="credit_limit" type="number" /></div>
+                      <div class="field"><label>发票 user_id</label><input id="inv_uid" /></div>
+                      <div class="field"><label>账期 2026-06</label><input id="inv_month" /></div>
+                    </div>
+                    <div class="btn-group"><button class="btn" onclick="setAgentCredit()">设信用额度</button><button class="btn secondary" onclick="createExtInvoice()">生成发票</button></div>
+                    <pre class="output-box" id="inv_list"></pre>
+                  </div></div>
+              </div>
+              <div id="ext-game-ops" class="ui-tab-panel">
+                <div class="panel"><div class="panel-head"><div><h2>游戏运维</h2></div></div>
+                  <div class="panel-body">
+                    <div class="field"><label>AppID</label><input id="g_appid" /></div>
+                    <div class="btn-group"><button class="btn secondary" onclick="gameExtOp('uninstall')">卸载</button><button class="btn secondary" onclick="gameExtOp('workshop')">创意工坊</button></div>
+                    <div class="field"><label>DLC AppID（逗号分隔）</label><input id="g_dlcs" /></div>
+                    <button class="btn" onclick="importExtDlc()">批量入库 DLC</button>
+                    <pre class="output-box" id="game_result"></pre>
+                  </div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+        </div><!-- .content-inner -->
+    </div>
+  </div>
+
+  <!-- 游戏详情弹窗 -->
+  <div class="modal" id="gameDetailModal" onclick="if(event.target===this)closeGameDetail()">
+    <div class="modal-box" style="max-width:480px">
+      <div class="modal-head"><h3 id="gameDetailTitle">游戏详情</h3></div>
+      <div class="modal-body">
+        <img id="gameDetailCover" class="game-detail-cover" alt="" />
+        <div class="meta-row"><span>AppID</span><code id="gameDetailAppid">-</code></div>
+        <div class="meta-row"><span>游戏名</span><span id="gameDetailName">-</span></div>
+        <div class="meta-row"><span>入库状态</span><span id="gameDetailStatus">-</span></div>
+        <div class="meta-row"><span>来源</span><span id="gameDetailSource">-</span></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn secondary" onclick="closeGameDetail()">关闭</button>
+        <button class="btn secondary" onclick="openSteamUrl(currentGameDetail && currentGameDetail.appid)">Steam</button>
+        <button class="btn secondary" onclick="copyText(currentGameDetail && currentGameDetail.appid || '')">复制 AppID</button>
+        <button class="btn" id="gameDetailGenBtn" onclick="openGenModalFromDetail()">生成卡密</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 生成 CDK 向导弹窗 -->
+  <div class="modal" id="genCdkModal" onclick="if(event.target===this)closeGenModal()">
+    <div class="modal-box" style="max-width:520px">
+      <div class="modal-head">
+        <h3 id="genModalTitle">生成卡密</h3>
+        <p id="genModalSub" style="color:var(--muted);font-size:13px;margin-top:4px"></p>
+      </div>
+      <div class="modal-body" id="genModalWizardWrap"></div>
+      <div class="modal-foot">
+        <button class="btn secondary" onclick="closeGenModal()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CDK 生成结果弹窗 -->
+  <div class="modal" id="cdkModal" onclick="if(event.target===this)closeModal()">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3 id="modalTitle">CDK 已生成</h3>
+        <p id="modalSub" style="color:var(--muted);font-size:13px;margin-top:4px"></p>
+      </div>
+      <div class="modal-body">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:8px">卡密列表（每行一个，可直接全选复制）</label>
+        <textarea id="modalCdksText" class="cdk-batch-text" readonly></textarea>
+      </div>
+      <div class="modal-foot">
+        <button class="btn secondary" onclick="closeModal()">关闭</button>
+        <button class="btn" onclick="copyAllCdks()">复制全部</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑代理 -->
+  <div class="modal" id="editAgentModal" onclick="if(event.target===this)closeEditAgent()">
+    <div class="modal-box">
+      <div class="modal-head"><h3 id="editAgentTitle">编辑代理</h3><p id="editAgentSub" style="color:var(--muted);font-size:13px;margin-top:4px"></p></div>
+      <div class="modal-body">
+        <input type="hidden" id="editAgentId" />
+        <div class="field"><label>显示名称</label><input id="editAgentName" /></div>
+      <input id="editAgentQuota" type="hidden" value="0" />
+      <div class="field"><label>CDK 成本单价</label><input id="editAgentPrice" type="number" step="0.01" /></div>
+      <div class="field"><label>备注</label><input id="editAgentNote" /></div>
+        <div class="field"><label>新密码（留空不改）</label><input id="editAgentPass" type="password" /></div>
+        <div class="field"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="editAgentEnabled" /> 启用此账号</label></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn secondary" onclick="closeEditAgent()">取消</button>
+        <button class="btn" onclick="saveAgentEdit()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 代理充值弹窗 -->
+  <div class="modal" id="rechargeModal" onclick="if(event.target===this)closeRechargeModal()">
+    <div class="modal-box" style="max-width:420px">
+      <div class="modal-head">
+        <h3>代理充值</h3>
+        <p id="rechargeSub" style="color:var(--muted);font-size:13px;margin-top:4px"></p>
+      </div>
+      <div class="modal-body">
+        <div class="field"><label>增加余额</label><input id="rechargeBalance" type="number" step="0.01" min="0" placeholder="0 表示不增加" /></div>
+        <input id="rechargeQuota" type="hidden" value="0" />
+        <div class="field"><label>备注</label><input id="rechargeNote" placeholder="可选" /></div>
+        <p style="font-size:12px;color:var(--muted);margin-top:4px">余额用于生成卡密与分润结算。</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn secondary" onclick="closeRechargeModal()">取消</button>
+        <button class="btn" onclick="submitRecharge()">确认充值</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 确认弹窗 -->
+  <div class="modal" id="confirmModal" onclick="if(event.target===this)closeConfirm(false)">
+    <div class="modal-box" style="max-width:400px">
+      <div class="modal-head"><h3 id="confirmTitle">确认操作</h3></div>
+      <div class="modal-body"><p id="confirmMsg"></p></div>
+      <div class="modal-foot">
+        <button class="btn secondary" onclick="closeConfirm(false)">取消</button>
+        <button class="btn danger" id="confirmOkBtn" onclick="closeConfirm(true)">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="forcePassModal">
+    <div class="modal-box" style="max-width:420px">
+      <div class="modal-head"><h3>请修改默认密码</h3><p style="color:var(--muted);font-size:13px">首次登录必须修改密码（至少 8 位，含字母和数字）</p></div>
+      <div class="modal-body">
+        <div class="field"><label>当前密码</label><input id="forceOldPass" type="password" /></div>
+        <div class="field"><label>新密码</label><input id="forceNewPass" type="password" /></div>
+        <div class="field"><label>确认新密码</label><input id="forceNewPass2" type="password" /></div>
+      </div>
+      <div class="modal-foot"><button class="btn" onclick="submitForcePassword()">保存并继续</button></div>
+    </div>
+  </div>
+
+  <div id="globalLoading"><div class="spinner"></div></div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const PUBLIC_URL = "__PUBLIC_URL__";
+    const TOKEN_KEY = "admin_token";
+    let token = localStorage.getItem(TOKEN_KEY) || "";
+    let currentUser = null;
+    let currentPage = "dashboard";
+    let lastGeneratedCdks = [];
+    let allCdkItems = [];
+    let allLogItems = [];
+    let agentCache = {};
+    let allAgentItems = [];
+    let agentFilter = "all";
+    let subAgentCache = {};
+    let baseCdkPrice = 0.1;
+    let cdkFilter = "all";
+    let confirmCallback = null;
+    let loadingCount = 0;
+
+    const PAGE_META = {
+      dashboard: { title: "仪表盘", desc: "数据概览与快捷操作" },
+      cdk: { title: "CDK 管理", desc: "查看、搜索与管理所有 CDK" },
+      logs: { title: "激活记录", desc: "已兑换 CDK 的历史记录" },
+      games: { title: "游戏与 CDK", desc: "浏览游戏、搜索并生成卡密" },
+      agents: { title: "代理管理", desc: "管理一级代理与全局定价" },
+      "recharge-audit": { title: "充值审核", desc: "审核前台代理提交的充值申请" },
+      "withdraw-audit": { title: "提现审核", desc: "审核代理余额提现申请" },
+      reports: { title: "运营报表", desc: "数据排行、代理树与审计日志" },
+      subagents: { title: "下级代理", desc: "邀请下级并设置 CDK 成本价" },
+      wallet: { title: "我的钱包", desc: "分润余额与入账记录" },
+      users: { title: "用户管理", desc: "管理系统账号" },
+      account: { title: "个人账户", desc: "修改密码与账号信息" },
+      system: { title: "站点配置", desc: "公告、CDK 与分润策略" },
+      "help-tutorial": { title: "激活教程", desc: "编辑 /help 前台教程页文字与图片" },
+      catalog: { title: "清单同步", desc: "游戏清单自动同步设置" },
+      github: { title: "GitHub Token", desc: "多 Token 轮询配置" },
+      extensions: { title: "扩展功能", desc: "支付、通知、API 与高级功能" },
+      payment: { title: "在线支付", desc: "支付宝 / 微信 / USDT" },
+      notify: { title: "消息通知", desc: "Telegram / 企微 / 邮件" },
+      security: { title: "安全 / 2FA", desc: "IP 白名单与两步验证" },
+      api: { title: "开放 API", desc: "API Key 与第三方对接" },
+      tenant: { title: "多租户", desc: "多域名站点管理" },
+      mall: { title: "CDK 商城", desc: "套餐与批量导入" },
+      stats: { title: "数据统计", desc: "图表与数据导出" },
+      "sync-webhook": { title: "清单 Webhook", desc: "同步进度与 Webhook" },
+      "agent-billing": { title: "代理信用 / 发票", desc: "信用额度与月结发票" },
+      "game-ops": { title: "游戏运维", desc: "卸载 / DLC / 创意工坊" },
+    };
+    const SUPER_ONLY_PAGES = new Set([
+      "system", "help-tutorial", "catalog", "github", "extensions",
+      "payment", "notify", "security", "api", "tenant",
+      "mall", "stats", "sync-webhook", "agent-billing", "game-ops",
+    ]);
+    const EXT_PAGES = new Set([
+      "payment", "notify", "security", "api", "tenant", "mall", "stats", "sync-webhook", "agent-billing", "game-ops",
+    ]);
+    let currentExtTab = "payment";
+    let sessionReady = false;
+    let gamesPage = 1;
+    let gamesTotalPages = 1;
+    let gameFilter = "all";
+    let manifestFilter = "has_manifest";
+    let gamesView = "grid";
+    let currentGamesItems = [];
+    let selectedGameIds = new Set();
+    let currentGameDetail = null;
+    let gamesLastSync = "";
+    let searchGamesItems = [];
+    let gameDetailScope = "catalog";
+    let genWizardState = {};
+    let rechargeTargetId = "";
+    let rcAuditFilter = "pending";
+    let rcAuditItems = [];
+    let wdAuditItems = [];
+    let agentUsernameMap = {};
+    const GEN_MODAL_KEY = "modal";
+
+    function genWizardHtml(appid, name, panelKey, compact) {
+      compact = !!compact;
+      return `
+        <div class="gen-wizard" id="genPanel-${panelKey}" data-appid="${appid}" data-name="${escAttr(name)}">
+          <div class="gen-stepper" id="genStepper-${panelKey}">
+            <span class="gen-step-dot active" data-step="1">1</span><span class="gen-step-line"></span>
+            <span class="gen-step-dot" data-step="2">2</span><span class="gen-step-line"></span>
+            <span class="gen-step-dot" data-step="3">3</span>
+          </div>
+          <div class="gen-step" id="genStep1-${panelKey}">
+            <div class="gen-step-title">① 选择数量</div>
+            <div class="gen-step-desc">输入数量或使用快捷按钮，支持 1～100 张</div>
+            <div class="gen-qty-row">
+              <button type="button" class="gen-qty-step" onclick="genWizardAdjustQty('${panelKey}', -1)">−</button>
+              <input type="number" id="genQtyInput-${panelKey}" class="gen-qty-input" min="1" max="100" value="1"
+                oninput="genWizardPickQty('${panelKey}', this.value)" />
+              <button type="button" class="gen-qty-step" onclick="genWizardAdjustQty('${panelKey}', 1)">+</button>
+              <span class="gen-qty-unit">张</span>
+            </div>
+            <div class="gen-qty-grid gen-qty-quick" id="genQtyQuick-${panelKey}">
+              ${[1, 5, 10, 20, 50].map(n => `<button type="button" class="gen-qty-btn${n === 1 ? " selected" : ""}" data-qty="${n}" onclick="genWizardPickQty('${panelKey}', ${n})">${n}</button>`).join("")}
+            </div>
+            <div class="gen-wizard-nav"><button type="button" class="btn" onclick="genWizardGo('${panelKey}', 2)">下一步</button></div>
+          </div>
+          <div class="gen-step hidden" id="genStep2-${panelKey}">
+            <div class="gen-step-title">② 选择模式</div>
+            <div class="gen-step-desc">普通生成立即扣余额；预生成按当前余额可买数量的 10 倍控制上限，激活后再扣余额</div>
+            <div class="gen-mode-cards">
+              <div class="gen-mode-card" id="genModeImmediate-${panelKey}" onclick="genWizardPickMode('${panelKey}', 'immediate')">
+                <div class="mode-name">普通生成</div>
+                <div class="mode-desc">适合已付款客户，生成时立即扣余额</div>
+                <span class="mode-tag">即时扣费</span>
+              </div>
+              <div class="gen-mode-card" id="genModePre-${panelKey}" onclick="genWizardPickMode('${panelKey}', 'on_activate')">
+                <div class="mode-name">预生成</div>
+                <div class="mode-desc">生成时不扣余额，客户激活成功后再扣余额并分润</div>
+                <span class="mode-tag">激活后扣费</span>
+              </div>
+            </div>
+            <div class="gen-wizard-nav">
+              <button type="button" class="btn secondary" onclick="genWizardGo('${panelKey}', 1)">上一步</button>
+              <button type="button" class="btn" id="genModeNext-${panelKey}" disabled onclick="genWizardGo('${panelKey}', 3)">下一步</button>
+            </div>
+          </div>
+          <div class="gen-step hidden" id="genStep3-${panelKey}">
+            <div class="gen-step-title">③ 确认生成</div>
+            <div class="gen-confirm-box" id="genConfirm-${panelKey}"></div>
+            <div class="gen-wizard-nav">
+              <button type="button" class="btn secondary" onclick="genWizardGo('${panelKey}', 2)">上一步</button>
+              <button type="button" class="btn" onclick="genWizardSubmit('${panelKey}')">确认生成</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function genPanelHtml(appid, name, panelKey, hasManifest) {
+      if (hasManifest === false) {
+        return `<div class="catalog-gen"><span class="gen-disabled-hint">暂无清单，无法入库，不能生成 CDK</span></div>`;
+      }
+      return `
+        <div class="catalog-gen">
+          <button type="button" class="btn" onclick="openGenModal('${appid}', '${escAttr(name)}')">生成卡密</button>
+        </div>
+      `;
+    }
+
+    function openGenModal(appid, name) {
+      const title = name || ("AppID " + appid);
+      document.getElementById("genModalTitle").textContent = "生成卡密";
+      document.getElementById("genModalSub").textContent = title + " · AppID " + appid;
+      const wrap = document.getElementById("genModalWizardWrap");
+      wrap.innerHTML = genWizardHtml(appid, name, GEN_MODAL_KEY);
+      resetGenWizard(GEN_MODAL_KEY, appid, name);
+      document.getElementById("genCdkModal").classList.add("show");
+    }
+
+    function openGenModalFromDetail() {
+      if (!currentGameDetail) return;
+      if (currentGameDetail.has_manifest === false) {
+        toast("暂无清单，无法生成 CDK", "err");
+        return;
+      }
+      const appid = currentGameDetail.appid;
+      const name = currentGameDetail.name || "";
+      closeGameDetail();
+      openGenModal(appid, name);
+    }
+
+    function closeGenModal() {
+      document.getElementById("genCdkModal")?.classList.remove("show");
+      const wrap = document.getElementById("genModalWizardWrap");
+      if (wrap) wrap.innerHTML = "";
+    }
+
+    function resetGenWizard(panelKey, appid, name) {
+      genWizardState[panelKey] = { appid, name, step: 1, count: 1, mode: "" };
+      genWizardGo(panelKey, 1, true);
+      document.getElementById("genModeImmediate-" + panelKey)?.classList.remove("selected");
+      document.getElementById("genModePre-" + panelKey)?.classList.remove("selected");
+      const nextBtn = document.getElementById("genModeNext-" + panelKey);
+      if (nextBtn) nextBtn.disabled = true;
+      document.querySelectorAll("#genQtyQuick-" + panelKey + " .gen-qty-btn").forEach(btn => {
+        btn.classList.toggle("selected", btn.dataset.qty === "1");
+      });
+      const qtyInput = document.getElementById("genQtyInput-" + panelKey);
+      if (qtyInput) qtyInput.value = "1";
+    }
+
+    function closeGenPanels() {
+      closeGenModal();
+    }
+
+    function genWizardClampQty(qty) {
+      let n = parseInt(String(qty), 10);
+      if (!Number.isFinite(n) || n < 1) n = 1;
+      if (n > 100) n = 100;
+      return n;
+    }
+
+    function genWizardPickQty(panelKey, qty) {
+      qty = genWizardClampQty(qty);
+      const st = genWizardState[panelKey] || {};
+      st.count = qty;
+      genWizardState[panelKey] = st;
+      const input = document.getElementById("genQtyInput-" + panelKey);
+      if (input && input.value !== String(qty)) input.value = String(qty);
+      document.querySelectorAll("#genQtyQuick-" + panelKey + " .gen-qty-btn").forEach(btn => {
+        btn.classList.toggle("selected", parseInt(btn.dataset.qty, 10) === qty);
+      });
+    }
+
+    function genWizardAdjustQty(panelKey, delta) {
+      const input = document.getElementById("genQtyInput-" + panelKey);
+      const current = genWizardClampQty(input?.value || genWizardState[panelKey]?.count || 1);
+      genWizardPickQty(panelKey, current + delta);
+    }
+
+    function genWizardReadQty(panelKey) {
+      const input = document.getElementById("genQtyInput-" + panelKey);
+      const qty = genWizardClampQty(input?.value || genWizardState[panelKey]?.count || 1);
+      genWizardPickQty(panelKey, qty);
+      return qty;
+    }
+
+    function genWizardPickMode(panelKey, mode) {
+      const st = genWizardState[panelKey] || {};
+      st.mode = mode;
+      genWizardState[panelKey] = st;
+      document.getElementById("genModeImmediate-" + panelKey)?.classList.toggle("selected", mode === "immediate");
+      document.getElementById("genModePre-" + panelKey)?.classList.toggle("selected", mode === "on_activate");
+      const nextBtn = document.getElementById("genModeNext-" + panelKey);
+      if (nextBtn) nextBtn.disabled = false;
+    }
+
+    function genWizardUpdateStepper(panelKey, step) {
+      const stepper = document.getElementById("genStepper-" + panelKey);
+      if (!stepper) return;
+      stepper.querySelectorAll(".gen-step-dot").forEach(dot => {
+        const n = parseInt(dot.dataset.step, 10);
+        dot.classList.toggle("active", n === step);
+        dot.classList.toggle("done", n < step);
+      });
+      stepper.querySelectorAll(".gen-step-line").forEach((line, i) => {
+        line.classList.toggle("done", i + 1 < step);
+      });
+    }
+
+    function agentAvailableBalance() {
+      if (!currentUser || currentUser.role !== "agent") return 0;
+      if (currentUser.available_balance != null) return currentUser.available_balance;
+      return Math.max(0, (currentUser.balance || 0) - (currentUser.pending_withdraw || 0));
+    }
+
+    function agentGenCost(count, mode) {
+      const price = currentUser?.cdk_cost_price || 0;
+      return Math.round(price * (count || 1) * 10000) / 10000;
+    }
+
+    function agentPreGenerateLimit() {
+      if (!currentUser || currentUser.role !== "agent") return Infinity;
+      const price = currentUser?.cdk_cost_price || 0;
+      if (price <= 0) return Infinity;
+      return Math.floor(agentAvailableBalance() / price) * 10;
+    }
+
+    function agentBalanceEnough(count, mode) {
+      if (!currentUser || currentUser.role !== "agent") return true;
+      if (mode === "on_activate") return ((currentUser?.cdk_pending || 0) + (count || 1)) <= agentPreGenerateLimit();
+      const cost = agentGenCost(count, mode);
+      if (cost <= 0) return true;
+      return (agentAvailableBalance() >= cost);
+    }
+
+    function agentQuotaEnough(count, mode) {
+      return true;
+    }
+
+    function genWizardConfirmHtml(panelKey) {
+      const st = genWizardState[panelKey] || {};
+      const count = st.count || 1;
+      const mode = st.mode || "immediate";
+      const name = st.name || "-";
+      const appid = st.appid || "-";
+      const modeLabel = mode === "on_activate" ? "预生成（激活后扣余额）" : "普通生成（立即扣余额）";
+      let extra = "";
+      if (currentUser && currentUser.role === "agent") {
+        const pending = currentUser.cdk_pending || 0;
+        const bal = agentAvailableBalance();
+        const bookBal = currentUser.balance || 0;
+        const pendingWd = currentUser.pending_withdraw || 0;
+        const cost = agentGenCost(count, mode);
+        const unitPrice = currentUser.cdk_cost_price || 0;
+        if (cost > 0) {
+          const balOk = bal >= cost;
+          const costHint = `（${count} × ¥${unitPrice.toFixed(2)}）`;
+          extra += `<div class="gen-account-box">${balOk
+            ? `${mode === "immediate" ? "本次将扣费" : "本次激活后扣费"} <b>¥${cost.toFixed(2)}</b>${costHint}，当前可用余额 <b>¥${bal.toFixed(2)}</b>`
+            : `可用余额不足：可用 ¥${bal.toFixed(2)}${pendingWd > 0 ? `（账面 ¥${bookBal.toFixed(2)}，待审提现 ¥${pendingWd.toFixed(2)}）` : ""}，需要 ¥${cost.toFixed(2)}${costHint}，请先充值`}
+            ${!balOk && currentUser.parent_id ? `<div style="margin-top:8px"><button type="button" class="btn secondary small" onclick="toast('请联系上级代理充值余额','')">联系上级充值</button></div>` : ""}
+          </div>`;
+        }
+        if (mode === "on_activate") {
+          const limit = agentPreGenerateLimit();
+          const need = pending + count;
+          const after = limit - need;
+          extra += `<div class="gen-account-box" style="margin-top:8px">预生成上限为当前余额可买数量的 10 倍（待激活 ${pending} + 本次 ${count}）。<br>${after < 0
+            ? `预生成额度不足：需 ${need} 张，上限 ${limit} 张，请先充值余额`
+            : `预生成后剩余额度约 <b>${after}</b> / ${limit} 张`}</div>`;
+        }
+      } else if (currentUser && currentUser.role === "superadmin") {
+        extra = `<div class="gen-account-box">超级管理员生成不受余额限制。</div>`;
+      }
+      if (mode === "on_activate" && currentUser && currentUser.role === "superadmin") {
+        extra += `<div style="margin-top:8px"><button type="button" class="btn secondary small" onclick="showPage('agents'); closeGenPanels();">前往代理充值</button></div>`;
+      }
+      return `
+        <div class="gen-confirm-row"><span>游戏</span><b>${esc(name)}</b></div>
+        <div class="gen-confirm-row"><span>AppID</span><b>${appid}</b></div>
+        <div class="gen-confirm-row"><span>数量</span><b>${count} 张</b></div>
+        <div class="gen-confirm-row"><span>模式</span><b>${modeLabel}</b></div>
+        ${extra}
+      `;
+    }
+
+    function genWizardGo(panelKey, step, silent) {
+      if (step >= 2 && !silent) genWizardReadQty(panelKey);
+      const st = genWizardState[panelKey] || {};
+      st.step = step;
+      genWizardState[panelKey] = st;
+      [1,2,3].forEach(n => {
+        document.getElementById("genStep" + n + "-" + panelKey)?.classList.toggle("hidden", n !== step);
+      });
+      genWizardUpdateStepper(panelKey, step);
+      if (step === 3) {
+        const box = document.getElementById("genConfirm-" + panelKey);
+        if (box) box.innerHTML = genWizardConfirmHtml(panelKey);
+      }
+    }
+
+    async function genWizardSubmit(panelKey) {
+      const st = genWizardState[panelKey] || {};
+      if (!st.mode) { toast("请选择生成模式", "err"); return; }
+      const count = st.count || 1;
+      if (currentUser && currentUser.role === "agent") {
+        if (!agentBalanceEnough(count, st.mode)) {
+          toast("可用余额不足，请先充值", "err");
+          return;
+        }
+        if (!agentQuotaEnough(count, st.mode)) {
+          toast("额度不足，请先充值", "err");
+          return;
+        }
+      }
+      await genCdkWithMode(st.appid, st.name, st.mode, panelKey, count);
+    }
+
+    function showCdkResultModal(d, appid, name, billing_mode) {
+      lastGeneratedCdks = d.cdks;
+      document.getElementById("modalTitle").textContent = "已为「" + name + "」生成 CDK";
+      document.getElementById("modalSub").textContent = "AppID " + appid + " · 共 " + d.cdks.length + " 个 · " + (billing_mode === "on_activate" ? "预生成" : "普通");
+      const textEl = document.getElementById("modalCdksText");
+      textEl.value = d.cdks.join("\n");
+      textEl.style.height = "auto";
+      textEl.style.height = Math.min(320, Math.max(160, textEl.scrollHeight + 4)) + "px";
+      document.getElementById("cdkModal").classList.add("show");
+      if (d.user) applyUserUI(d.user);
+      if (d.commission && d.commission.length) {
+        toast("已生成，上级分润 +" + d.commission[0].amount, "ok");
+      } else if (billing_mode === "on_activate") {
+        toast("预生成 " + d.cdks.length + " 个，激活后才扣余额", "ok");
+      } else {
+        toast("成功生成 " + d.cdks.length + " 个 CDK", "ok");
+      }
+    }
+
+    async function genCdkWithMode(appid, name, billing_mode, panelKey, countOverride) {
+      const st = genWizardState[panelKey] || {};
+      const count = countOverride || st.count || parseInt(document.getElementById("cnt-" + panelKey)?.value || "1", 10);
+      const d = await api("/api/admin/cdk/generate", {
+        method: "POST",
+        body: { appid, name, count, billing_mode },
+      });
+      if (!d.ok) { toast(d.message || "生成失败", "err"); return; }
+      closeGenModal();
+      showCdkResultModal(d, appid, name, billing_mode);
+      if (currentPage === "dashboard") loadDashboard();
+    }
+
+    function setManifestFilter(f) {
+      manifestFilter = f;
+      document.querySelectorAll("#manifestFilterTabs button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.manifest === f);
+      });
+      gameSearchSubmit();
+    }
+
+    function setGameFilter(f) {
+      gameFilter = f;
+      document.querySelectorAll("#gameFilterTabs button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.filter === f);
+      });
+      gameSearchSubmit();
+    }
+
+    function setGamesView(view) {
+      gamesView = view;
+      document.getElementById("viewGridBtn").classList.toggle("active", view === "grid");
+      document.getElementById("viewListBtn").classList.toggle("active", view === "list");
+      document.getElementById("gamesGrid").classList.toggle("active", view === "grid");
+      document.getElementById("gamesListWrap").classList.toggle("active", view === "list");
+    }
+
+    function gameCardHtml(g, idx, scope) {
+      scope = scope || "cat";
+      const panelKey = scope + "-" + g.appid;
+      const sel = selectedGameIds.has(g.appid);
+      const manifestBadge = g.has_manifest
+        ? '<span class="catalog-manifest">有清单</span>'
+        : '<span class="catalog-no-manifest">无清单</span>';
+      return `
+        <div class="catalog-card ${g.installed ? "has-installed" : ""} ${sel ? "selected" : ""}" data-appid="${g.appid}">
+          <input type="checkbox" class="catalog-select" ${sel ? "checked" : ""} onchange="toggleGameSelect('${g.appid}', this.checked)" />
+          <div class="catalog-cover">
+            <img src="${g.header}" alt="" loading="lazy" onerror="this.style.display='none'" />
+            <span class="catalog-appid">${g.appid}</span>
+            ${g.installed ? '<span class="catalog-installed">已入库</span>' : ''}
+            ${manifestBadge}
+          </div>
+          <div class="catalog-body">
+            <div class="catalog-name" title="${esc(g.name)}">${esc(g.name)}</div>
+            <div class="catalog-actions">
+              <button class="btn secondary" onclick="openGameDetail(${idx}, '${scope}')">详情</button>
+              <button class="btn secondary" onclick="copyText('${g.appid}')">AppID</button>
+            </div>
+            ${genPanelHtml(g.appid, g.name, panelKey, g.has_manifest)}
+          </div>
+        </div>
+      `;
+    }
+
+    function gameListRowHtml(g, idx) {
+      const panelKey = "list-" + g.appid;
+      const sel = selectedGameIds.has(g.appid);
+      return `
+        <tr class="${sel ? "selected" : ""}">
+          <td><input type="checkbox" ${sel ? "checked" : ""} onchange="toggleGameSelect('${g.appid}', this.checked)" /></td>
+          <td><img src="${g.header}" alt="" style="width:80px;height:38px;object-fit:cover;border-radius:4px" loading="lazy" onerror="this.style.display='none'" /></td>
+          <td><code>${g.appid}</code></td>
+          <td>${esc(g.name)}</td>
+          <td>${g.installed ? '<span class="tag ok">已入库</span>' : '<span class="tag">未入库</span>'} ${g.has_manifest ? '<span class="tag ok">有清单</span>' : '<span class="tag">无清单</span>'}</td>
+          <td style="font-size:12px;color:var(--muted)">${esc(g.source || "-")}</td>
+          <td style="min-width:240px">
+            <div class="btn-group" style="margin-bottom:6px">
+              <button class="btn secondary small" onclick="openGameDetail(${idx}, 'catalog')">详情</button>
+              <button class="btn secondary small" onclick="openSteamUrl('${g.appid}')">Steam</button>
+            </div>
+            ${genPanelHtml(g.appid, g.name, panelKey, g.has_manifest)}
+          </td>
+        </tr>
+      `;
+    }
+
+    function renderGamesItems(items) {
+      currentGamesItems = items;
+      const grid = document.getElementById("gamesGrid");
+      const table = document.getElementById("gamesListTable");
+      if (!items.length) {
+        grid.innerHTML = '<div class="empty" style="grid-column:1/-1">暂无匹配游戏</div>';
+        table.innerHTML = '<tr><td colspan="7" class="empty">暂无匹配游戏</td></tr>';
+        document.getElementById("gameSelectAll").checked = false;
+        return;
+      }
+      grid.innerHTML = items.map((g, i) => gameCardHtml(g, i)).join("");
+      table.innerHTML = items.map((g, i) => gameListRowHtml(g, i)).join("");
+      syncSelectAllCheckbox();
+    }
+
+    function syncSelectAllCheckbox() {
+      const all = currentGamesItems.map(g => g.appid);
+      const el = document.getElementById("gameSelectAll");
+      if (!el || !all.length) return;
+      el.checked = all.every(id => selectedGameIds.has(id));
+      el.indeterminate = !el.checked && all.some(id => selectedGameIds.has(id));
+    }
+
+    function toggleGameSelect(appid, checked) {
+      if (checked) selectedGameIds.add(appid);
+      else selectedGameIds.delete(appid);
+      renderGamesItems(currentGamesItems);
+    }
+
+    function toggleSelectAllGames() {
+      const checked = document.getElementById("gameSelectAll").checked;
+      currentGamesItems.forEach(g => {
+        if (checked) selectedGameIds.add(g.appid);
+        else selectedGameIds.delete(g.appid);
+      });
+      renderGamesItems(currentGamesItems);
+    }
+
+    function openSteamUrl(appid) {
+      const g = currentGamesItems.find(x => x.appid === appid) || currentGameDetail;
+      const url = (g && g.store_url) || `https://store.steampowered.com/app/${appid}`;
+      window.open(url, "_blank", "noopener");
+    }
+
+    function openGameDetail(idx, scope) {
+      scope = scope || "catalog";
+      gameDetailScope = scope;
+      const items = scope === "search" ? searchGamesItems : currentGamesItems;
+      currentGameDetail = items[idx];
+      if (!currentGameDetail) return;
+      const g = currentGameDetail;
+      document.getElementById("gameDetailTitle").textContent = g.name || "游戏详情";
+      document.getElementById("gameDetailCover").src = g.header || "";
+      document.getElementById("gameDetailAppid").textContent = g.appid;
+      document.getElementById("gameDetailName").textContent = g.name || "-";
+      document.getElementById("gameDetailStatus").textContent = g.installed ? "已入库" : "未入库";
+      document.getElementById("gameDetailSource").textContent = g.source || "-";
+      const genBtn = document.getElementById("gameDetailGenBtn");
+      if (genBtn) {
+        genBtn.style.display = g.has_manifest === false ? "none" : "";
+      }
+      document.getElementById("gameDetailModal").classList.add("show");
+    }
+
+    function closeGameDetail() {
+      document.getElementById("gameDetailModal").classList.remove("show");
+      currentGameDetail = null;
+    }
+
+    function exportAppids(ids) {
+      if (!ids.length) { toast("没有可导出的 AppID", "err"); return; }
+      copyText(ids.join("\n"));
+    }
+
+    function exportGamesPage() {
+      exportAppids(currentGamesItems.map(g => g.appid));
+    }
+
+    function exportGamesSelected() {
+      exportAppids(Array.from(selectedGameIds));
+    }
+
+    function updateGamesStatusBar(stats, refresh) {
+      const parts = [];
+      if (stats.manifest_filter === "has_manifest") parts.push("清单：可入库");
+      else if (stats.manifest_filter === "no_manifest") parts.push("清单：无清单");
+      else parts.push("清单：全库参考");
+      if (!stats.github_token_configured && (stats.manifest_count || 0) < 3000) {
+        parts.push("提示：配置 GitHub Token 可大幅扩充可入库游戏");
+      }
+      if (stats.catalog_filter === "installed") parts.push("入库：已入库");
+      else if (stats.catalog_filter === "not_installed") parts.push("入库：未入库");
+      else parts.push("入库：全部");
+      parts.push("排序：" + ({ appid_desc: "AppID↓", appid_asc: "AppID↑", name_asc: "名称A-Z" }[stats.sort] || stats.sort));
+      if (refresh) {
+        gamesLastSync = new Date().toLocaleString();
+      }
+      if (gamesLastSync) parts.push("上次同步 " + gamesLastSync);
+      if (selectedGameIds.size) parts.push("已选 " + selectedGameIds.size + " 项");
+      document.getElementById("gamesStatusBar").textContent = parts.join(" · ");
+    }
+
+    function setLoading(on) {
+      loadingCount += on ? 1 : -1;
+      if (loadingCount < 0) loadingCount = 0;
+      document.getElementById("globalLoading").classList.toggle("show", loadingCount > 0);
+    }
+
+    function toast(msg, type) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.className = "toast show" + (type === "err" ? " err" : type === "ok" ? " ok" : "");
+      setTimeout(() => el.classList.remove("show"), 2800);
+    }
+
+    function copyText(text) {
+      navigator.clipboard.writeText(text).then(() => toast("已复制到剪贴板", "ok"));
+    }
+
+    function cdkInstallCmd(code) {
+      return `$cdk="${code}"; irm ${PUBLIC_URL} | iex`;
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("open");
+    }
+
+    function showConfirm(title, msg, cb) {
+      document.getElementById("confirmTitle").textContent = title;
+      document.getElementById("confirmMsg").textContent = msg;
+      confirmCallback = cb;
+      document.getElementById("confirmModal").classList.add("show");
+    }
+
+    function closeConfirm(ok) {
+      document.getElementById("confirmModal").classList.remove("show");
+      if (ok && confirmCallback) confirmCallback();
+      confirmCallback = null;
+    }
+
+    function openRechargeModal(userId) {
+      const u = agentCache[userId] || subAgentCache[userId];
+      if (!u) { toast("找不到代理信息", "err"); return; }
+      rechargeTargetId = userId;
+      document.getElementById("rechargeSub").textContent = `${u.display_name || u.username} · 余额 ${(u.balance||0).toFixed(2)}`;
+      document.getElementById("rechargeBalance").value = "";
+      document.getElementById("rechargeQuota").value = "";
+      document.getElementById("rechargeNote").value = "";
+      document.getElementById("rechargeModal").classList.add("show");
+    }
+
+    function closeRechargeModal() {
+      document.getElementById("rechargeModal").classList.remove("show");
+      rechargeTargetId = "";
+    }
+
+    async function submitRecharge() {
+      if (!rechargeTargetId) return;
+      const balance = parseFloat(document.getElementById("rechargeBalance").value || "0");
+      const note = document.getElementById("rechargeNote").value.trim();
+      if (!Number.isFinite(balance) || balance <= 0) {
+        toast("请填写充值金额", "err");
+        return;
+      }
+      const d = await api("/api/admin/users/" + rechargeTargetId + "/recharge", {
+        method: "POST",
+        body: { balance: balance || 0, quota: 0, note },
+      });
+      if (!d.ok) { toast(d.message || "充值失败", "err"); return; }
+      if (d.user) {
+        agentCache[rechargeTargetId] = d.user;
+        subAgentCache[rechargeTargetId] = d.user;
+      }
+      closeRechargeModal();
+      toast("充值成功", "ok");
+      if (currentPage === "agents") loadAgents();
+      if (currentPage === "subagents") loadSubAgents();
+      if (currentPage === "recharge-audit") loadRechargeAudit();
+    }
+
+    function syncToken() {
+      token = localStorage.getItem(TOKEN_KEY) || "";
+      return token;
+    }
+
+    function fetchOpts(opts) {
+      return Object.assign({ credentials: "same-origin" }, opts || {});
+    }
+
+    function authHeaders(extra) {
+      const h = Object.assign({}, extra || {});
+      const t = syncToken();
+      if (t) h["Authorization"] = "Bearer " + t;
+      return h;
+    }
+
+    async function api(path, opts) {
+      opts = opts || {};
+      setLoading(true);
+      const timeoutMs = (opts.timeout != null ? opts.timeout : 120) * 1000;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+      try {
+        const headers = authHeaders(opts.headers);
+        if (opts.body && typeof opts.body === "object") {
+          headers["Content-Type"] = "application/json";
+          opts.body = JSON.stringify(opts.body);
+        }
+        const { timeout, ...restOpts } = opts;
+        const r = await fetch(path, fetchOpts(Object.assign({}, restOpts, { headers, signal: ctrl.signal })));
+        let d = {};
+        try { d = await r.json(); } catch (_) {}
+        if (r.status === 401) {
+          if (sessionReady) logout(false);
+          return { ok: false, message: d.message || "请先登录", _status: 401 };
+        }
+        d._status = r.status;
+        return d;
+      } catch (e) {
+        if (e && e.name === "AbortError") {
+          return { ok: false, message: "请求超时，服务器可能正在同步清单，请稍后再试", _status: 408 };
+        }
+        return { ok: false, message: (e && e.message) || "网络错误", _status: 0 };
+      } finally {
+        clearTimeout(timer);
+        setLoading(false);
+      }
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    }
+    function escAttr(s) { return String(s).replace(/'/g, "\\'"); }
+
+    function billingModeLabel(mode, charged, used, revoked) {
+      if (revoked) return '<span class="tag off">已回收</span>';
+      if (mode === "on_activate") {
+        if (used && charged) return '<span class="tag ok">已激活扣费</span>';
+        if (used) return '<span class="tag used">已激活</span>';
+        return '<span class="tag role">预生成</span>';
+      }
+      return '<span class="tag ok">即时</span>';
+    }
+
+    function applyCommands(d) {
+      if (!d) return;
+      const url = d.public_url || PUBLIC_URL;
+      document.getElementById("topUrl").textContent = url.replace(/^https?:\/\//, "");
+      document.getElementById("cmdInstall").textContent = d.install_cmd || `irm ${url} | iex`;
+      document.getElementById("cmdHook").textContent = d.hook_cmd || `irm ${url}/hook | iex`;
+      document.getElementById("cmdCdk").textContent = d.cdk_cmd || `$cdk="XXXX"; irm ${url} | iex`;
+    }
+
+    function applyUserUI(user) {
+      currentUser = user;
+      const isSuper = user.role === "superadmin";
+      document.querySelectorAll(".super-only").forEach(el => {
+        if (el.classList.contains("nav-item") || el.classList.contains("nav-section") || el.tagName === "TH") {
+          el.style.display = isSuper ? "" : "none";
+        } else if (el.tagName !== "SECTION") {
+          el.classList.toggle("hidden", !isSuper);
+        }
+      });
+      document.querySelectorAll(".agent-only").forEach(el => {
+        el.classList.toggle("hidden", isSuper);
+      });
+      document.querySelectorAll(".agent-only-nav").forEach(el => {
+        el.classList.toggle("hidden", isSuper);
+      });
+      const name = (user.display_name || user.username || "U").toString();
+      document.getElementById("sidebarUser").textContent = name;
+      document.getElementById("userAvatar").textContent = (name.charAt(0) || "U").toUpperCase();
+      document.getElementById("sidebarRole").textContent = isSuper
+        ? "超级管理员"
+        : `代理 · 余额 ${(user.balance || 0).toFixed(2)} · 成本 ${(user.cdk_cost_price || 0).toFixed(2)}`;
+      const setUserEl = document.getElementById("setUser");
+      const setRoleEl = document.getElementById("setRole");
+      const setNameEl = document.getElementById("setName");
+      if (setUserEl) setUserEl.value = user.username || "";
+      if (setRoleEl) setRoleEl.value = isSuper ? "超级管理员" : "代理";
+      if (setNameEl) setNameEl.value = user.display_name || "-";
+      if (!isSuper) {
+        const pending = user.cdk_pending || 0;
+        const price = user.cdk_cost_price || 0;
+        const available = user.available_balance != null ? user.available_balance : Math.max(0, (user.balance || 0) - (user.pending_withdraw || 0));
+        const limit = price > 0 ? Math.floor(available / price) * 10 : 0;
+        document.getElementById("dQuota").textContent = `${pending} / ${limit} 待激活`;
+        document.getElementById("quotaBar").style.width = (limit ? Math.min(100, Math.round(pending / limit * 100)) : 0) + "%";
+      }
+      if (!isSuper) {
+        document.getElementById("dBalance").textContent = (user.balance || 0).toFixed(2);
+        document.getElementById("dCostHint").textContent = "我的成本价 " + (user.cdk_cost_price || 0).toFixed(2) + " / CDK";
+        document.getElementById("dSubAgents").textContent = user.sub_agent_count || 0;
+        const minSub = (parseFloat(user.cdk_cost_price) || 0) + 0.01;
+        const subPriceEl = document.getElementById("subPrice");
+        if (subPriceEl) subPriceEl.placeholder = "不低于 " + minSub.toFixed(2);
+        const hintEl = document.getElementById("subAgentHint");
+        if (hintEl) hintEl.textContent = `您的成本价 ${(user.cdk_cost_price || 0).toFixed(2)}，给下级设置更高单价，差价即为利润`;
+      }
+    }
+
+    function goAdminLogin() {
+      sessionReady = false;
+      localStorage.removeItem(TOKEN_KEY);
+      token = "";
+      currentUser = null;
+      location.href = "/admin/login";
+    }
+
+    async function enterApp(user, extra) {
+      localStorage.removeItem("portal_token");
+      syncToken();
+      const site = (extra && extra.site_name) || localStorage.getItem("admin_site_name") || "CS Steam 管理台";
+      document.getElementById("siteName").textContent = site;
+      applyUserUI(user);
+      applyCommands(extra);
+      await showPage("dashboard");
+      if (user.must_change_password) {
+        document.getElementById("forcePassModal").classList.add("show");
+      }
+    }
+
+    async function checkSession() {
+      sessionReady = false;
+      syncToken();
+      if (!token) { goAdminLogin(); return; }
+      let d = {};
+      try {
+        const r = await fetch("/api/admin/me", fetchOpts({ headers: authHeaders() }));
+        const text = await r.text();
+        try { d = JSON.parse(text); } catch (_) {}
+        if (!r.ok || !d.ok || !d.user || !d.user.role) { goAdminLogin(); return; }
+        if (d.user.role === "agent") {
+          localStorage.setItem("portal_token", token);
+          localStorage.removeItem(TOKEN_KEY);
+          location.href = "/portal";
+          return;
+        }
+        if (d.user.role !== "superadmin") { goAdminLogin(); return; }
+      } catch (_) {
+        goAdminLogin();
+        return;
+      }
+      try {
+        await enterApp(d.user, d);
+        sessionReady = true;
+      } catch (e) {
+        console.error("enterApp failed", e);
+        toast("界面加载失败，请点右上角刷新或重新登录", "err");
+      }
+    }
+
+    function logout(notify) {
+      if (token) fetch("/api/admin/logout", { method: "POST", headers: authHeaders() }).catch(() => {});
+      if (notify !== false) toast("已退出登录");
+      goAdminLogin();
+    }
+    function doLogout() { logout(true); }
+
+    async function showPage(name, extTab) {
+      if (name === "generate") name = "games";
+      if (name === "settings") name = "account";
+      if (EXT_PAGES.has(name)) {
+        extTab = name;
+        name = "extensions";
+      }
+      if (name === "extensions" && currentUser && currentUser.role !== "superadmin") {
+        toast("需要超级管理员权限", "err");
+        name = "dashboard";
+        extTab = null;
+      } else if (SUPER_ONLY_PAGES.has(name) && name !== "extensions" && currentUser && currentUser.role !== "superadmin") {
+        toast("需要超级管理员权限", "err");
+        name = "dashboard";
+      }
+      if (name === "extensions" && !extTab) extTab = currentExtTab || "payment";
+      currentPage = name;
+      if (extTab) currentExtTab = extTab;
+      document.querySelectorAll('section[id^="page-"]').forEach(s => s.classList.add("hidden"));
+      const pageEl = document.getElementById("page-" + name);
+      if (!pageEl) {
+        currentPage = "dashboard";
+        document.getElementById("page-dashboard").classList.remove("hidden");
+      } else {
+        pageEl.classList.remove("hidden");
+      }
+      document.querySelectorAll(".nav-item").forEach(n => {
+        n.classList.toggle("active", n.dataset.page === name);
+      });
+      if (name === "extensions") {
+        if (typeof initExtensionsPage === "function") initExtensionsPage();
+        if (typeof switchExtTab === "function") switchExtTab(currentExtTab, true);
+      } else {
+        const meta = PAGE_META[name] || { title: name, desc: "" };
+        document.getElementById("pageTitle").textContent = meta.title;
+        document.getElementById("pageDesc").textContent = meta.desc;
+      }
+      document.getElementById("sidebar").classList.remove("open");
+      await refreshCurrentPage();
+    }
+
+    async function refreshCurrentPage() {
+      const fn = {
+        dashboard: loadDashboard,
+        cdk: loadCdkList,
+        logs: loadLogs,
+        games: () => loadGames(false),
+        agents: loadAgents,
+        "recharge-audit": loadRechargeAudit,
+        "withdraw-audit": loadWithdrawAudit,
+        reports: loadReports,
+        subagents: loadSubAgents,
+        wallet: loadWallet,
+        users: loadUsers,
+        account: loadAccountPage,
+        system: loadSystemSettingsPage,
+        "help-tutorial": loadHelpTutorialPage,
+        catalog: loadCatalogSettingsPage,
+        github: loadGithubSettingsPage,
+        extensions: () => {
+          if (typeof loadExtensionsData === "function") loadExtensionsData();
+          if (typeof refreshExtTab === "function") refreshExtTab(currentExtTab);
+        },
+      }[currentPage];
+      if (fn) await fn();
+    }
+
+    function loadAccountPage() {}
+
+    async function loadSystemSettingsPage() {
+      if (!currentUser || currentUser.role !== "superadmin") return;
+      const d = await api("/api/admin/settings");
+      if (!d.ok) return;
+      const set = (id, val) => { const el = document.getElementById(id); if (el && val != null) el.value = val; };
+      set("registerDefaultQuota", d.register_default_quota);
+      set("setSiteName", d.site_name);
+      set("cdkDefaultExpire", d.cdk_default_expire_days);
+      set("commissionMaxLevels", d.commission_max_levels);
+      const ann = document.getElementById("setAnnouncement");
+      if (ann) ann.value = d.announcement || "";
+      const en = document.getElementById("setAnnouncementEnabled");
+      if (en) en.checked = !!d.announcement_enabled;
+    }
+
+    async function loadCatalogSettingsPage() {
+      if (!currentUser || currentUser.role !== "superadmin") return;
+      const cat = await api("/api/admin/catalog/sync-status");
+      if (cat.ok) updateCatalogSyncUI(cat);
+    }
+
+    async function loadGithubSettingsPage() {
+      if (!currentUser || currentUser.role !== "superadmin") return;
+      const gh = await api("/api/admin/github-token");
+      if (gh.ok) updateGhTokenUI(gh);
+    }
+
+    function gameSearchSubmit() {
+      gamesPage = 1;
+      loadGames(false);
+    }
+
+    async function loadGames(refresh) {
+      const q = document.getElementById("gameSearch").value.trim();
+      const sort = document.getElementById("gameSort").value || "appid_desc";
+      const limit = document.getElementById("gamePageSize").value || "48";
+      const params = new URLSearchParams({
+        q,
+        page: String(gamesPage),
+        limit,
+        refresh: refresh ? "1" : "0",
+        filter: gameFilter,
+        manifest: manifestFilter,
+        sort,
+      });
+      const grid = document.getElementById("gamesGrid");
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1">加载中，首次同步 Steam 全库可能需要 1～2 分钟…</div>';
+      document.getElementById("gamesListTable").innerHTML = '<tr><td colspan="7" class="empty">加载中…</td></tr>';
+      document.getElementById("gamesStatusBar").textContent = refresh ? "正在同步清单…" : "加载中…";
+      try {
+        const d = await api("/api/admin/games?" + params.toString());
+        if (!d.ok) {
+          let msg = d.message || "加载失败";
+          if (d._status === 404) msg = "游戏接口不存在，请重启 web_server.py 后再打开本页";
+          grid.innerHTML = '<div class="empty" style="grid-column:1/-1">' + esc(msg) + '</div>';
+          document.getElementById("gamesListTable").innerHTML = '<tr><td colspan="7" class="empty">' + esc(msg) + '</td></tr>';
+          return;
+        }
+        const stats = d.stats || {};
+        document.getElementById("gTotal").textContent = stats.total_unique ?? "-";
+        document.getElementById("gManifest").textContent = stats.manifest_count ?? "-";
+        document.getElementById("gInstalled").textContent = stats.installed_count ?? "-";
+        document.getElementById("gFiltered").textContent = stats.filtered_count ?? d.total ?? "-";
+        gamesTotalPages = stats.total_pages || 1;
+        gamesPage = stats.page || gamesPage;
+
+        const hint = document.getElementById("gamesHint");
+        if (hint) {
+          hint.textContent = `可入库 ${stats.manifest_count ?? 0} 款 · 已入库 ${stats.installed_count ?? 0} · Steam 全库 ${stats.total_unique ?? 0} 款（仅供参考）`;
+        }
+
+        updateGamesStatusBar(stats, refresh);
+        renderGamesItems(d.items || []);
+        renderGamesPager();
+        if (refresh && stats.sync) {
+          const s = stats.sync;
+          toast(
+            `同步完成：远程 ${s.fetched_from_remote ?? 0} 款 · 新增 ${s.newly_added ?? 0} 款 · 保留 ${s.kept_previous ?? 0} 款 · 合计 ${s.total_after_sync ?? 0} 款`,
+            "ok"
+          );
+        } else if (refresh) {
+          toast("清单已同步", "ok");
+        }
+      } catch (e) {
+        grid.innerHTML = '<div class="empty" style="grid-column:1/-1">' + esc(e.message || "网络错误，请确认服务已启动") + '</div>';
+        document.getElementById("gamesListTable").innerHTML = '<tr><td colspan="7" class="empty">' + esc(e.message || "网络错误") + '</td></tr>';
+      }
+    }
+
+    function renderGamesPager() {
+      const el = document.getElementById("gamesPager");
+      if (gamesTotalPages <= 1) {
+        el.innerHTML = gamesPage === 1 ? "" : `<span class="pager-info">第 ${gamesPage} 页</span>`;
+        return;
+      }
+      el.innerHTML = `
+        <button class="btn secondary small" ${gamesPage <= 1 ? "disabled" : ""} onclick="gamesGoPage(${gamesPage - 1})">上一页</button>
+        <span class="pager-info">第 ${gamesPage} / ${gamesTotalPages} 页</span>
+        <button class="btn secondary small" ${gamesPage >= gamesTotalPages ? "disabled" : ""} onclick="gamesGoPage(${gamesPage + 1})">下一页</button>
+      `;
+    }
+
+    function gamesGoPage(p) {
+      if (p < 1 || p > gamesTotalPages) return;
+      gamesPage = p;
+      loadGames(false);
+      document.querySelector("#page-games .panel-body")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    async function loadDashboard() {
+      const [dash, logs] = await Promise.all([
+        api("/api/admin/dashboard"),
+        api("/api/admin/logs?limit=8"),
+      ]);
+      if (!dash.ok) return;
+      applyCommands(dash);
+      if (dash.user) applyUserUI(dash.user);
+      document.getElementById("dTotal").textContent = dash.cdk_total;
+      document.getElementById("dUsed").textContent = dash.cdk_used;
+      document.getElementById("dUnused").textContent = dash.cdk_unused;
+      document.getElementById("dToday").textContent = dash.today_activated;
+      if (currentUser && currentUser.role === "superadmin") {
+        document.getElementById("dAgents").textContent = dash.agent_count;
+        const pendingRc = dash.pending_recharge_count || 0;
+        document.getElementById("dPendingRecharge").textContent = pendingRc;
+        updateRechargeBadge(pendingRc);
+        updateWithdrawBadge(dash.pending_withdraw_count || 0);
+        baseCdkPrice = dash.base_cdk_price || 0.1;
+        const bp = document.getElementById("baseCdkPrice");
+        const ap = document.getElementById("agentPrice");
+        if (bp) bp.value = baseCdkPrice;
+        if (ap) ap.value = baseCdkPrice;
+      }
+      if (currentUser && currentUser.role === "agent") {
+        document.getElementById("dBalance").textContent = (dash.balance || 0).toFixed(2);
+        document.getElementById("dSubAgents").textContent = dash.sub_agent_count || 0;
+        document.getElementById("dCostHint").textContent = "我的成本价 " + (dash.cdk_cost_price || 0).toFixed(2) + " / CDK";
+      }
+      const recent = logs.items || [];
+      const tbody = document.getElementById("recentLogs");
+      if (!recent.length) {
+        tbody.innerHTML = '<tr><td colspan="3" class="empty">暂无激活记录</td></tr>';
+      } else {
+        tbody.innerHTML = recent.map(it => `
+          <tr>
+            <td>${esc(it.name || "-")}</td>
+            <td><code>${it.cdk}</code></td>
+            <td style="color:var(--muted);font-size:12px">${it.used_at || "-"}</td>
+          </tr>
+        `).join("");
+      }
+    }
+
+    async function doSearch() {
+      const q = document.getElementById("searchInput").value.trim();
+      const wrap = document.getElementById("searchResultsWrap");
+      const box = document.getElementById("searchResults");
+      if (!q) {
+        wrap.classList.add("hidden");
+        box.innerHTML = "";
+        searchGamesItems = [];
+        return;
+      }
+      wrap.classList.remove("hidden");
+      box.innerHTML = '<div class="empty" style="grid-column:1/-1">搜索中…</div>';
+      const d = await api("/api/admin/search?q=" + encodeURIComponent(q));
+      if (!d.ok || !d.games.length) {
+        searchGamesItems = [];
+        box.innerHTML = '<div class="empty" style="grid-column:1/-1">未找到匹配游戏</div>';
+        return;
+      }
+      searchGamesItems = d.games;
+      box.innerHTML = d.games.map((g, i) => gameCardHtml(g, i, "search")).join("");
+    }
+
+    function copyAllCdks() {
+      const el = document.getElementById("modalCdksText");
+      const text = el ? el.value : lastGeneratedCdks.join("\n");
+      copyText(text);
+    }
+    function closeModal() { document.getElementById("cdkModal").classList.remove("show"); }
+
+    function setCdkFilter(mode) {
+      cdkFilter = mode;
+      document.getElementById("tabAll").classList.toggle("active", mode === "all");
+      document.getElementById("tabUnused").classList.toggle("active", mode === "unused");
+      document.getElementById("tabUsed").classList.toggle("active", mode === "used");
+      renderCdkTable();
+    }
+
+    function getFilteredCdks() {
+      let items = allCdkItems;
+      if (cdkFilter === "used") items = items.filter(x => x.used);
+      if (cdkFilter === "unused") items = items.filter(x => !x.used);
+      const q = (document.getElementById("cdkSearch")?.value || "").trim().toLowerCase();
+      if (q) {
+        items = items.filter(x =>
+          x.cdk.toLowerCase().includes(q) ||
+          String(x.appid).includes(q) ||
+          (x.name || "").toLowerCase().includes(q)
+        );
+      }
+      return items;
+    }
+
+    function renderCdkTable() {
+      const tbody = document.getElementById("cdkTable");
+      const items = getFilteredCdks();
+      const showCreator = currentUser && currentUser.role === "superadmin";
+      const cols = showCreator ? 8 : 7;
+      document.getElementById("cdkListCount").textContent = "共 " + items.length + " 条";
+      if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="${cols}" class="empty">暂无数据</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = items.map(it => `
+        <tr>
+          <td><code>${it.cdk}</code></td>
+          <td>${esc(it.name || "-")}</td>
+          <td>${it.appid}</td>
+          <td>${it.revoked ? '<span class="tag off">已回收</span>' : `<span class="tag ${it.used ? "used" : "ok"}">${it.used ? "已使用" : "未使用"}</span>`}</td>
+          <td>${billingModeLabel(it.billing_mode || "immediate", it.charged, it.used, it.revoked)}</td>
+          ${showCreator ? `<td>${esc(it.created_by || "-")}</td>` : ""}
+          <td style="color:var(--muted);font-size:12px">${it.created_at || "-"}</td>
+          <td><div class="td-actions">
+            <button class="btn secondary small" onclick="copyText('${it.cdk}')">复制</button>
+            <button class="btn secondary small" onclick="copyText(cdkInstallCmd('${it.cdk}'))">命令</button>
+            ${!it.used && !it.revoked ? `<button class="btn danger small" onclick="deleteCdk('${it.cdk}')">删除</button>` : ""}
+            ${it.used && !it.revoked ? `<button class="btn danger small" onclick="recycleCdk('${it.cdk}')">回收</button>` : ""}
+            ${it.revoked ? `<button class="btn secondary small" onclick="copyRevokeCmd('${it.cdk}')">卸载命令</button>` : ""}
+          </div></td>
+        </tr>
+      `).join("");
+    }
+
+    async function loadCdkList() {
+      const d = await api("/api/admin/cdk/list?limit=200");
+      allCdkItems = d.items || [];
+      renderCdkTable();
+    }
+
+    function exportUnused() {
+      const unused = allCdkItems.filter(x => !x.used);
+      if (!unused.length) { toast("没有未使用的 CDK", "err"); return; }
+      copyText(unused.map(x => x.cdk).join("\n"));
+    }
+
+    function copyRevokeCmd(cdk) {
+      copyText(`$cdk="${cdk}"; irm ${PUBLIC_URL}/revoke.ps1 | iex`);
+    }
+
+    function recycleCdk(cdk) {
+      showConfirm("回收 CDK", "回收后：① 成本退回到代理余额 ② 该 CDK 永久失效 ③ 需让客户运行「卸载命令」移除本地游戏插件，游戏才无法继续玩。", async () => {
+        const d = await api("/api/admin/cdk/recycle", { method: "POST", body: { cdk } });
+        if (!d.ok) { toast(d.message || "回收失败", "err"); return; }
+        let msg = `已回收，退回余额 ¥${(d.balance_refund || 0).toFixed(2)}`;
+        if (d.client_revoke_cmd) {
+          copyText(d.client_revoke_cmd);
+          msg += "，客户卸载命令已复制";
+        }
+        toast(msg, "ok");
+        if (d.user) applyUserUI(d.user);
+        loadCdkList();
+        if (currentPage === "dashboard") loadDashboard();
+      });
+    }
+
+    function deleteCdk(cdk) {
+      showConfirm("删除 CDK", "确定删除 " + cdk + "？若已扣费将退还余额。", async () => {
+        const d = await api("/api/admin/cdk/delete", { method: "POST", body: { cdk } });
+        if (!d.ok) { toast(d.message || "删除失败", "err"); return; }
+        let msg = "已删除";
+        if ((d.balance_refund || 0) > 0) msg += `，已退还 ¥${Number(d.balance_refund).toFixed(2)}`;
+        toast(msg, "ok");
+        if (d.user) applyUserUI(d.user);
+        loadCdkList();
+        if (currentPage === "dashboard") loadDashboard();
+      });
+    }
+
+    function renderLogsTable() {
+      const tbody = document.getElementById("logsTable");
+      const q = (document.getElementById("logSearch")?.value || "").trim().toLowerCase();
+      let items = allLogItems;
+      if (q) {
+        items = items.filter(x =>
+          x.cdk.toLowerCase().includes(q) ||
+          String(x.appid).includes(q) ||
+          (x.name || "").toLowerCase().includes(q)
+        );
+      }
+      const showCreator = currentUser && currentUser.role === "superadmin";
+      const cols = showCreator ? 6 : 5;
+      if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="${cols}" class="empty">暂无激活记录</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = items.map(it => `
+        <tr>
+          <td><code>${it.cdk}</code></td>
+          <td>${esc(it.name || "-")}</td>
+          <td>${it.appid}</td>
+          <td style="color:var(--muted);font-size:12px">${it.used_at || "-"}</td>
+          <td><code style="font-size:11px">${it.used_machine || "-"}</code></td>
+          ${showCreator ? `<td>${esc(it.created_by || "-")}</td>` : ""}
+        </tr>
+      `).join("");
+    }
+
+    async function loadLogs() {
+      const d = await api("/api/admin/logs?limit=300");
+      allLogItems = d.items || [];
+      renderLogsTable();
+    }
+
+    function setAgentFilter(filter) {
+      agentFilter = filter;
+      document.querySelectorAll("#agentFilterTabs button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.filter === filter);
+      });
+      renderAgentsTable();
+    }
+
+    function renderAgentsTable() {
+      const tbody = document.getElementById("agentsTable");
+      if (!tbody) return;
+      let items = allAgentItems.slice();
+      if (agentFilter === "top") items = items.filter(u => !u.parent_id);
+      if (agentFilter === "sub") items = items.filter(u => !!u.parent_id);
+      agentCache = {};
+      items.forEach(u => { agentCache[u.id] = u; });
+      if (!items.length) {
+        const emptyMsg = agentFilter === "sub"
+          ? "暂无下级代理（通过邀请链接注册的账号会显示在这里）"
+          : agentFilter === "top"
+            ? "暂无一级代理"
+            : "暂无代理，请在上方「添加代理」创建";
+        tbody.innerHTML = `<tr><td colspan="11" class="empty">${emptyMsg}</td></tr>`;
+        return;
+      }
+      const regBase = (PUBLIC_URL || "").replace(/\/$/, "");
+      tbody.innerHTML = items.map(u => {
+        const invite = u.invite_code || "";
+        const regUrl = invite ? `${regBase}/register?code=${invite}` : "";
+        const inviteCell = invite
+          ? `<code class="invite-code">${esc(invite)}</code>
+             <div class="td-actions" style="margin-top:4px">
+               <button class="btn ghost small" onclick="copyText('${escAttr(regUrl)}')">复制链接</button>
+             </div>`
+          : `<span style="color:var(--muted);font-size:12px">—</span>`;
+        const invitePrice = u.invite_cost_price != null ? Number(u.invite_cost_price).toFixed(2) : null;
+        const levelTag = u.parent_id
+          ? `<span class="tag used" style="margin-right:4px">下级</span>`
+          : `<span class="tag ok" style="margin-right:4px">一级</span>`;
+        const parentLabel = u.parent_username
+          ? esc(u.parent_username + (u.parent_display_name ? `（${u.parent_display_name}）` : ""))
+          : "—";
+        const resetInviteBtn = invite
+          ? `<button class="btn secondary small" onclick="resetAgentInvite('${u.id}')">重置邀请</button>`
+          : "";
+        return `
+        <tr>
+          <td>${levelTag}<b>${esc(u.username)}</b></td>
+          <td>${esc(u.display_name || "-")}</td>
+          <td>${parentLabel}</td>
+          <td>${inviteCell}</td>
+          <td>${(Number(u.cdk_cost_price) || 0).toFixed(2)}${invitePrice != null ? `<div style="font-size:11px;color:var(--muted)">邀请价 ${invitePrice}</div>` : ""}</td>
+          <td>${(Number(u.balance) || 0).toFixed(2)}</td>
+          <td>${u.cdk_generated}</td>
+          <td>${u.sub_agent_count || 0}</td>
+          <td><span class="tag ${u.enabled ? "ok" : "off"}">${u.enabled ? "正常" : "禁用"}</span></td>
+          <td><div class="td-actions">
+            <button class="btn small" onclick="openRechargeModal('${u.id}')">充值</button>
+            <button class="btn secondary small" onclick="openEditAgent('${u.id}')">编辑</button>
+            ${resetInviteBtn}
+            <button class="btn danger small" onclick="deleteUser('${u.id}','${escAttr(u.username)}')">删除</button>
+          </div></td>
+        </tr>`;
+      }).join("");
+    }
+
+    async function loadAgents() {
+      const tbody = document.getElementById("agentsTable");
+      if (!tbody) return;
+      try {
+        const d = await api("/api/admin/agents");
+        if (!d.ok) {
+          tbody.innerHTML = `<tr><td colspan="11" class="empty">${esc(d.message || "加载代理失败")}</td></tr>`;
+          return;
+        }
+        const settings = await api("/api/admin/settings");
+        if (settings.ok) {
+          baseCdkPrice = settings.base_cdk_price || 0.1;
+          const bp = document.getElementById("baseCdkPrice");
+          const ap = document.getElementById("agentPrice");
+          if (bp) bp.value = baseCdkPrice;
+          if (ap) ap.value = baseCdkPrice;
+        }
+        allAgentItems = d.items || [];
+        renderAgentsTable();
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="11" class="empty">${esc(e.message || "加载失败")}</td></tr>`;
+      }
+    }
+
+    function updateRechargeBadge(count) {
+      const badge = document.getElementById("navRechargeBadge");
+      if (!badge) return;
+      badge.textContent = String(count || 0);
+      badge.classList.toggle("show", (count || 0) > 0);
+    }
+
+    function rcStatusTag(status) {
+      if (status === "approved") return '<span class="tag ok">已通过</span>';
+      if (status === "rejected") return '<span class="tag off">已拒绝</span>';
+      return '<span class="tag used">待审核</span>';
+    }
+
+    function setRcAuditFilter(filter) {
+      rcAuditFilter = filter;
+      document.querySelectorAll("#rcAuditTabs button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.filter === filter);
+      });
+      renderRcAuditTable();
+    }
+
+    function renderRcAuditTable() {
+      const tbody = document.getElementById("rcAuditTable");
+      if (!tbody) return;
+      let items = rcAuditItems;
+      if (rcAuditFilter !== "all") {
+        items = items.filter(x => (x.status || "pending") === rcAuditFilter);
+      }
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty">暂无充值申请</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(it => {
+        const who = esc(it.display_name ? `${it.username}（${it.display_name}）` : (it.username || "-"));
+        const amount = it.type === "quota"
+          ? `<b>${it.amount || 0} 张</b>`
+          : `<b>¥${(it.amount || 0).toFixed(2)}</b>`;
+        const status = it.status || "pending";
+        const proofNote = [it.note, it.proof].filter(Boolean).map(x => esc(x)).join("<br>");
+        const reviewInfo = it.review_note ? `<div style="font-size:11px;color:var(--muted)">审核：${esc(it.review_note)}</div>` : "";
+        const actions = status === "pending"
+          ? `<div class="td-actions">
+              <button class="btn small" onclick="reviewRecharge('${it.id}','approve')">通过</button>
+              <button class="btn danger small" onclick="reviewRecharge('${it.id}','reject')">拒绝</button>
+            </div>`
+          : `<span style="font-size:12px;color:var(--muted)">${esc(it.reviewer_username || "-")}<br>${esc(it.reviewed_at || "")}</span>`;
+        const chk = status === "pending" ? `<input type="checkbox" class="rc-audit-chk" value="${it.id}" />` : "";
+        return `<tr>
+          <td>${chk}</td>
+          <td style="font-size:12px;color:var(--muted)">${esc(it.created_at || "-")}</td>
+          <td>${who}</td>
+          <td>余额</td>
+          <td>${amount}</td>
+          <td style="font-size:12px">${proofNote || "-"}${reviewInfo}</td>
+          <td>${rcStatusTag(status)}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    function toggleRcAuditAll(checked) {
+      document.querySelectorAll(".rc-audit-chk").forEach(el => { el.checked = checked; });
+    }
+
+    function selectedRcAuditIds() {
+      return Array.from(document.querySelectorAll(".rc-audit-chk:checked")).map(el => el.value);
+    }
+
+    async function batchReviewRecharge(action) {
+      const ids = selectedRcAuditIds();
+      if (!ids.length) return toast("请先勾选待审核项", "err");
+      let note = "";
+      if (action === "reject") {
+        note = prompt("批量拒绝说明（必填）", "") || "";
+        if (!note.trim()) return toast("请填写拒绝说明", "err");
+      }
+      if (!confirm(`确认批量${action === "approve" ? "通过" : "拒绝"} ${ids.length} 条？`)) return;
+      const d = await api("/api/admin/recharge/batch-review", { method: "POST", body: { request_ids: ids, action, note } });
+      if (!d.ok && !d.ok_count) return toast(d.message || "操作失败", "err");
+      toast(`完成 ${d.ok_count || 0} 条` + (d.errors && d.errors.length ? `，${d.errors.length} 条失败` : ""), d.errors && d.errors.length ? "err" : "ok");
+      loadRechargeAudit();
+      loadDashboard();
+    }
+
+    function updateWithdrawBadge(count) {
+      const badge = document.getElementById("navWithdrawBadge");
+      if (!badge) return;
+      badge.textContent = String(count || 0);
+      badge.classList.toggle("show", (count || 0) > 0);
+    }
+
+    function renderWdAuditTable() {
+      const tbody = document.getElementById("wdAuditTable");
+      if (!tbody) return;
+      const items = wdAuditItems.filter(x => (x.status || "pending") === "pending");
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty">暂无待审核提现</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(it => `<tr>
+        <td><input type="checkbox" class="wd-audit-chk" value="${it.id}" /></td>
+        <td style="font-size:12px;color:var(--muted)">${esc(it.created_at || "-")}</td>
+        <td>${esc(it.username || "-")}</td>
+        <td><b>¥${(it.amount || 0).toFixed(2)}</b></td>
+        <td style="font-size:12px">${esc(it.payout_info || "-")}</td>
+        <td style="font-size:12px">${esc(it.note || "-")}</td>
+        <td>${rcStatusTag(it.status || "pending")}</td>
+        <td><div class="td-actions">
+          <button class="btn small" onclick="reviewWithdraw('${it.id}','approve')">通过</button>
+          <button class="btn danger small" onclick="reviewWithdraw('${it.id}','reject')">拒绝</button>
+        </div></td>
+      </tr>`).join("");
+    }
+
+    async function loadWithdrawAudit() {
+      const d = await api("/api/admin/withdraw/requests");
+      wdAuditItems = d.items || [];
+      renderWdAuditTable();
+      updateWithdrawBadge(wdAuditItems.filter(x => x.status === "pending").length);
+    }
+
+    function toggleWdAuditAll(checked) {
+      document.querySelectorAll(".wd-audit-chk").forEach(el => { el.checked = checked; });
+    }
+
+    async function reviewWithdraw(requestId, action) {
+      let note = "";
+      if (action === "reject") {
+        note = prompt("拒绝说明（必填）", "") || "";
+        if (!note.trim()) return toast("请填写拒绝说明", "err");
+      }
+      const d = await api("/api/admin/withdraw/review", { method: "POST", body: { request_id: requestId, action, note } });
+      if (!d.ok) return toast(d.message || "操作失败", "err");
+      toast("操作成功", "ok");
+      loadWithdrawAudit();
+      loadDashboard();
+    }
+
+    async function batchReviewWithdraw(action) {
+      const ids = Array.from(document.querySelectorAll(".wd-audit-chk:checked")).map(el => el.value);
+      if (!ids.length) return toast("请先勾选", "err");
+      let note = "";
+      if (action === "reject") {
+        note = prompt("批量拒绝说明", "") || "";
+        if (!note.trim()) return toast("请填写说明", "err");
+      }
+      const d = await api("/api/admin/withdraw/batch-review", { method: "POST", body: { request_ids: ids, action, note } });
+      toast(`完成 ${d.ok_count || 0} 条`, "ok");
+      loadWithdrawAudit();
+    }
+
+    function renderAgentTree(nodes, depth) {
+      depth = depth || 0;
+      return (nodes || []).map(n => {
+        const pad = "  ".repeat(depth);
+        let line = `${pad}└ ${n.username}（${n.display_name || "-"}）已生成 ${n.cdk_generated || 0} 余额 ${(n.balance||0).toFixed(2)}\n`;
+        if (n.children && n.children.length) line += renderAgentTree(n.children, depth + 1);
+        return line;
+      }).join("");
+    }
+
+    async function loadReports() {
+      const [report, tree, audit] = await Promise.all([
+        api("/api/admin/reports"),
+        api("/api/admin/agent-tree"),
+        api("/api/admin/audit-logs?limit=100"),
+      ]);
+      if (report.ok) {
+        document.getElementById("reportStats").innerHTML = `
+          <div class="stat-card accent-blue"><div class="label">今日激活</div><div class="value">${report.today_activations || 0}</div></div>
+          <div class="stat-card accent-green"><div class="label">今日充值申请</div><div class="value">${report.today_recharge_requests || 0}</div></div>
+          <div class="stat-card accent-purple"><div class="label">待审核充值</div><div class="value">${report.pending_recharge || 0}</div></div>
+          <div class="stat-card accent-orange"><div class="label">待审核提现</div><div class="value">${report.pending_withdraw || 0}</div></div>`;
+        const ag = report.top_agents_today || [];
+        document.getElementById("reportAgents").innerHTML = ag.length ? ag.map(a => `<tr><td>${esc(a.username)}</td><td>${a.today_activations}</td><td>${a.cdk_generated}</td><td>${(a.balance||0).toFixed(2)}</td></tr>`).join("") : '<tr><td colspan="4" class="empty">暂无</td></tr>';
+        const gs = report.top_games_today || [];
+        document.getElementById("reportGames").innerHTML = gs.length ? gs.map(g => `<tr><td>${g.appid}</td><td>${esc(g.name||"-")}</td><td>${g.count}</td></tr>`).join("") : '<tr><td colspan="3" class="empty">暂无</td></tr>';
+      }
+      document.getElementById("agentTreeView").textContent = tree.ok ? (renderAgentTree(tree.tree) || "暂无代理") : "加载失败";
+      const logs = audit.items || [];
+      document.getElementById("auditLogsTable").innerHTML = logs.length ? logs.map(it => `<tr><td style="font-size:12px">${esc(it.created_at||"-")}</td><td>${esc(it.operator_name||"-")}</td><td>${esc(it.action||"-")}</td><td>${esc(it.detail||"-")}</td></tr>`).join("") : '<tr><td colspan="4" class="empty">暂无</td></tr>';
+    }
+
+    async function exportLogsCsv() {
+      const r = await fetch("/api/admin/export/logs.csv", { headers: authHeaders() });
+      if (!r.ok) return toast("导出失败", "err");
+      const blob = await r.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "activation_logs.csv";
+      a.click();
+    }
+
+    async function exportRechargeCsv() {
+      const r = await fetch("/api/admin/export/recharge.csv", { headers: authHeaders() });
+      if (!r.ok) return toast("导出失败", "err");
+      const blob = await r.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "recharge_requests.csv";
+      a.click();
+    }
+
+    async function submitForcePassword() {
+      const oldp = document.getElementById("forceOldPass").value;
+      const p1 = document.getElementById("forceNewPass").value;
+      const p2 = document.getElementById("forceNewPass2").value;
+      if (p1 !== p2) return toast("两次密码不一致", "err");
+      const d = await api("/api/admin/password", { method: "POST", body: { old_password: oldp, new_password: p1 } });
+      if (!d.ok) return toast(d.message || "修改失败", "err");
+      document.getElementById("forcePassModal").classList.remove("show");
+      toast("密码已更新", "ok");
+      checkSession();
+    }
+
+    async function saveSystemSettings() {
+      const d = await api("/api/admin/settings", {
+        method: "POST",
+        body: {
+          site_name: document.getElementById("setSiteName").value.trim(),
+          register_default_quota: parseInt(document.getElementById("registerDefaultQuota").value, 10),
+          cdk_default_expire_days: parseInt(document.getElementById("cdkDefaultExpire").value, 10),
+          commission_max_levels: parseInt(document.getElementById("commissionMaxLevels").value, 10),
+          announcement: document.getElementById("setAnnouncement").value,
+          announcement_enabled: document.getElementById("setAnnouncementEnabled").checked,
+        },
+      });
+      if (!d.ok) return toast(d.message || "保存失败", "err");
+      toast("系统设置已保存", "ok");
+    }
+
+    async function loadRechargeAudit() {
+      const [reqs, logs, agents] = await Promise.all([
+        api("/api/admin/recharge/requests"),
+        api("/api/admin/recharge/logs?limit=100"),
+        api("/api/admin/agents"),
+      ]);
+      rcAuditItems = reqs.items || [];
+      agentUsernameMap = {};
+      (agents.items || []).forEach(u => { agentUsernameMap[u.id] = u.username; });
+      renderRcAuditTable();
+      const pending = rcAuditItems.filter(x => x.status === "pending").length;
+      updateRechargeBadge(pending);
+
+      const logBody = document.getElementById("rcLogsTable");
+      const logItems = logs.items || [];
+      if (!logItems.length) {
+        logBody.innerHTML = '<tr><td colspan="5" class="empty">暂无充值日志</td></tr>';
+        return;
+      }
+      logBody.innerHTML = logItems.map(it => `<tr>
+        <td style="font-size:12px;color:var(--muted)">${esc(it.created_at || "-")}</td>
+        <td>${esc(agentUsernameMap[it.user_id] || it.user_id || "-")}</td>
+        <td>${esc(it.operator_username || "-")}</td>
+        <td>${it.balance_delta ? ("+" + Number(it.balance_delta).toFixed(2)) : "-"}</td>
+        <td style="font-size:12px">${esc(it.note || "-")}</td>
+      </tr>`).join("");
+    }
+
+    async function reviewRecharge(requestId, action) {
+      const label = action === "approve" ? "通过并到账" : "拒绝";
+      let note = "";
+      if (action === "reject") {
+        note = prompt("拒绝说明（必填）", "") || "";
+        if (!note.trim()) return toast("请填写拒绝说明", "err");
+      } else if (!confirm(`确认${label}该充值申请？`)) return;
+      const d = await api("/api/admin/recharge/review", {
+        method: "POST",
+        body: { request_id: requestId, action, note },
+      });
+      if (!d.ok) { toast(d.message || "操作失败", "err"); return; }
+      toast(d.message || "操作成功", "ok");
+      loadRechargeAudit();
+      if (currentPage === "dashboard") loadDashboard();
+      if (currentPage === "agents") loadAgents();
+    }
+
+    async function loadSettingsPage() {
+      await loadSystemSettingsPage();
+      await loadCatalogSettingsPage();
+      await loadGithubSettingsPage();
+    }
+
+    function updateCatalogSyncUI(data) {
+      const box = document.getElementById("catalogSyncStatus");
+      const auto = document.getElementById("catalogAutoSync");
+      const hours = document.getElementById("catalogAutoSyncHours");
+      const merge = document.getElementById("catalogMergeOnSync");
+      if (auto) auto.checked = !!data.auto_sync_enabled;
+      if (hours && data.auto_sync_hours != null) hours.value = data.auto_sync_hours;
+      if (merge) merge.checked = !!data.merge_on_sync;
+      if (!box) return;
+      const lm = data.last_manifest || {};
+      const ls = data.last_steam || {};
+      box.innerHTML = [
+        `<div>存储：<b>${esc(data.storage || "—")}</b> · 缓存：可入库 <b>${data.manifest_cached || 0}</b> 款 · Steam 全库 <b>${data.steam_cached || 0}</b> 款</div>`,
+        data.last_sync_at ? `<div>上次同步：${esc(data.last_sync_at)} · 新增 manifest ${lm.newly_added ?? "-"} 款 / Steam ${ls.newly_added ?? "-"} 款</div>` : `<div>尚未同步，启动约 30 秒后自动首次同步，或点「立即同步」</div>`,
+      ].join("");
+    }
+
+    async function saveCatalogSyncSettings() {
+      const d = await api("/api/admin/catalog/settings", {
+        method: "POST",
+        body: {
+          auto_sync_enabled: document.getElementById("catalogAutoSync").checked,
+          auto_sync_hours: parseInt(document.getElementById("catalogAutoSyncHours").value, 10) || 24,
+          merge_on_sync: document.getElementById("catalogMergeOnSync").checked,
+        },
+      });
+      if (!d.ok) return toast(d.message || "保存失败", "err");
+      toast(d.message || "已保存", "ok");
+      const st = await api("/api/admin/catalog/sync-status");
+      if (st.ok) updateCatalogSyncUI(st);
+      else if (d.settings) updateCatalogSyncUI(d.settings);
+    }
+
+    async function enrichAllManifestMeta() {
+      if (!confirm("将为清单库中缺少中英文名称的游戏批量补齐封面（默认最多 500 款），可能需几分钟，继续？")) return;
+      toast("正在批量补齐，请稍候…", "ok");
+      const d = await api("/api/admin/games/enrich-meta", {
+        method: "POST",
+        body: { all_manifest: true, force: false, limit: 500 },
+        timeout: 600000,
+      });
+      if (!d.ok) return toast(d.message || "批量补齐失败", "err");
+      toast(d.message || "批量补齐完成", "ok");
+      if (currentPage === "games") loadGames(false);
+    }
+
+    async function runCatalogSyncNow() {
+      const d = await api("/api/admin/catalog/sync", { method: "POST", body: {}, timeout: 20 });
+      if (!d.ok) return toast(d.message || "同步失败", "err");
+      toast(d.message || "同步已开始", "ok");
+      await pollCatalogSyncUntilDone();
+    }
+
+    async function pollCatalogSyncUntilDone() {
+      for (let i = 0; i < 180; i++) {
+        await new Promise(r => setTimeout(r, 2000));
+        const p = await api("/api/admin/sync/progress", { timeout: 15 });
+        if (!p || p.running) {
+          const box = document.getElementById("catalogSyncStatus");
+          if (box && p && p.running) {
+            box.innerHTML = `<div>同步中：${esc(p.percent ?? 0)}% · ${esc(p.message || "处理中…")}</div>`;
+          }
+          continue;
+        }
+        if (p.error) {
+          toast("同步失败：" + p.error, "err");
+        } else {
+          toast(p.message || "同步完成", "ok");
+        }
+        const st = await api("/api/admin/catalog/sync-status");
+        if (st.ok) updateCatalogSyncUI(st);
+        if (currentPage === "games") loadGames(false);
+        return;
+      }
+      toast("同步仍在进行，请稍后刷新查看进度", "ok");
+    }
+
+    function renderManualGamePreview(d) {
+      const box = document.getElementById("manualGamePreview");
+      if (!box) return;
+      if (!d || !d.ok) {
+        box.classList.add("hidden");
+        return;
+      }
+      box.classList.remove("hidden");
+      const inList = d.in_manifest ? "已在清单" : "未在清单";
+      const imp = d.importable || d.can_import
+        ? '<span class="tag ok">可入库</span>'
+        : '<span class="tag off">暂不可入库</span>';
+      const depotLine = (d.depot_total != null)
+        ? `<br>Depot：${d.depot_total} 个 · 有密钥 ${d.depot_with_key || 0} 个`
+          + (d.depot_sample && d.depot_sample.length ? ` · 示例 <code>${esc(d.depot_sample.join(", "))}</code>` : "")
+        : "";
+      const nameLine = (d.name_zh || d.name_en)
+        ? `<br>中文：${esc(d.name_zh || "-")} · 英文：${esc(d.name_en || "-")}`
+        : "";
+      box.innerHTML = `<strong>${esc(d.name || "")}</strong> · AppID <code>${esc(d.appid)}</code>`
+        + (d.steam_type ? ` · 类型 ${esc(d.steam_type)}` : "")
+        + (d.status ? ` · <span class="tag">${esc(d.status)}</span>` : "")
+        + nameLine
+        + `<br>清单：${inList} · ${imp}${depotLine}`
+        + `<br><span style="color:var(--muted)">${esc(d.import_note || "")}</span>`;
+      if (d.name && document.getElementById("manualGameName") && !document.getElementById("manualGameName").value.trim()) {
+        document.getElementById("manualGameName").value = d.name;
+      }
+    }
+
+    async function enrichManualGameMeta() {
+      const appid = (document.getElementById("manualGameAppid")?.value || "").trim();
+      if (!appid) return toast("请填写 AppID", "err");
+      const d = await api("/api/admin/games/enrich-meta", {
+        method: "POST",
+        body: { appid, force: true },
+        timeout: 60,
+      });
+      if (!d.ok) return toast(d.message || "补齐失败", "err");
+      toast((d.skipped ? "已有：" : "已补齐：") + (d.name || appid), "ok");
+      if (d.name && document.getElementById("manualGameName")) {
+        document.getElementById("manualGameName").value = d.name;
+      }
+      renderManualGamePreview({
+        ok: true,
+        appid: d.appid || appid,
+        name: d.name,
+        name_zh: d.name_zh,
+        name_en: d.name_en,
+        in_manifest: true,
+        importable: true,
+        import_note: "已补齐中英文名称与封面",
+      });
+      if (currentPage === "games") loadGames(false);
+    }
+
+    async function previewManualGame() {
+      const appid = (document.getElementById("manualGameAppid")?.value || "").trim();
+      if (!appid) return toast("请填写 AppID", "err");
+      const d = await api("/api/admin/games/preview?appid=" + encodeURIComponent(appid));
+      if (!d.ok) return toast(d.message || "预览失败", "err");
+      renderManualGamePreview(d);
+    }
+
+    async function addManualGame() {
+      const appid = (document.getElementById("manualGameAppid")?.value || "").trim();
+      if (!appid) return toast("请填写 AppID", "err");
+      const name = (document.getElementById("manualGameName")?.value || "").trim();
+      const force = !!document.getElementById("manualGameForce")?.checked;
+      const probe = !!document.getElementById("manualGameProbe")?.checked;
+      const try_import = !!document.getElementById("manualGameTryImport")?.checked;
+      const d = await api("/api/admin/games/add", {
+        method: "POST",
+        body: { appid, name, force, probe, try_import },
+      });
+      if (!d.ok) {
+        if (d.can_force) renderManualGamePreview({ ok: true, ...d, importable: false });
+        return toast(d.message || "添加失败", "err");
+      }
+      toast(d.message || "已添加", "ok");
+      if (d.server_import) {
+        const si = d.server_import;
+        if (si.lua_exists) toast("已生成 " + si.lua_path, "ok");
+        else if (!si.ok) toast("预入库失败: " + (si.message || ""), "err");
+      }
+      renderManualGamePreview({ ok: true, appid: d.appid, name: d.name, in_manifest: true, importable: d.importable, import_note: d.import_note || "" });
+      if (currentPage === "games") loadGames(false);
+      const st = await api("/api/admin/catalog/sync-status");
+      if (st.ok) updateCatalogSyncUI(st);
+    }
+
+    function updateGhTokenUI(data) {
+      const status = document.getElementById("ghTokenStatus");
+      const countEl = document.getElementById("ghTokenCount");
+      const listEl = document.getElementById("ghTokenList");
+      const input = document.getElementById("ghTokenInput");
+      const count = data.count || (data.configured ? 1 : 0);
+      if (status) {
+        status.textContent = data.configured ? "已配置" : "未配置";
+        status.className = "tag " + (data.configured ? "ok" : "off");
+      }
+      if (countEl) {
+        countEl.textContent = data.configured
+          ? `共 ${count} 个 Token（同步时自动轮换）`
+          : "未配置时 GitHub API 每小时仅约 60 次请求";
+      }
+      if (listEl) {
+        const masked = data.masked_tokens || (data.masked ? [data.masked] : []);
+        listEl.innerHTML = masked.length
+          ? masked.map((m, i) => `<div>#${i + 1} ${esc(m)}</div>`).join("")
+          : "";
+      }
+      if (input && !input.value) {
+        input.placeholder = data.configured
+          ? "输入新 Token 列表（每行一个）将覆盖已有配置"
+          : "ghp_xxxxxxxx\ngithub_pat_xxxxxxxx";
+      }
+    }
+
+    async function saveGitHubToken() {
+      const tokensText = (document.getElementById("ghTokenInput").value || "").trim();
+      if (!tokensText) return toast("请输入 Token（每行一个），或点击「清除全部」", "err");
+      const d = await api("/api/admin/github-token", { method: "POST", body: { tokens_text: tokensText } });
+      if (!d.ok) return toast(d.message || "保存失败", "err");
+      document.getElementById("ghTokenInput").value = "";
+      updateGhTokenUI(d);
+      toast(d.message || "已保存", "ok");
+    }
+
+    async function clearGitHubToken() {
+      if (!confirm("确定清除全部 GitHub Token？清除后清单同步速度可能变慢。")) return;
+      const d = await api("/api/admin/github-token", { method: "POST", body: { tokens_text: "" } });
+      if (!d.ok) return toast(d.message || "清除失败", "err");
+      document.getElementById("ghTokenInput").value = "";
+      updateGhTokenUI(d);
+      toast("GitHub Token 已清除", "ok");
+    }
+
+    async function saveRegisterQuota() { saveSystemSettings(); }
+
+    async function resetAgentInvite(agentId) {
+      if (!confirm("重置后旧邀请链接失效，确定继续？")) return;
+      const d = await api("/api/admin/agents/" + agentId + "/invite/reset", { method: "POST", body: {} });
+      if (!d.ok) return toast(d.message || "失败", "err");
+      toast("邀请码已重置", "ok");
+      loadAgents();
+    }
+
+    async function saveBasePrice() {
+      const price = parseFloat(document.getElementById("baseCdkPrice").value);
+      if (!Number.isFinite(price) || price <= 0) {
+        toast("请输入有效的基础单价", "err");
+        return;
+      }
+      const d = await api("/api/admin/settings", {
+        method: "POST",
+        body: { base_cdk_price: price },
+      });
+      if (!d.ok) {
+        let msg = d.message || "保存失败";
+        if (d._status === 404) msg = "保存接口不可用，请重启 web_server.py 后再试";
+        toast(msg, "err");
+        return;
+      }
+      baseCdkPrice = price;
+      document.getElementById("agentPrice").value = price;
+      toast("基础单价已更新为 " + price, "ok");
+    }
+
+    async function loadSubAgents() {
+      const d = await api("/api/admin/sub-agents");
+      const tbody = document.getElementById("subAgentsTable");
+      const items = d.items || [];
+      subAgentCache = {};
+      items.forEach(u => { subAgentCache[u.id] = u; });
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无下级，点击上方邀请</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(u => `
+        <tr>
+          <td><b>${esc(u.username)}</b></td>
+          <td>${esc(u.display_name || "-")}</td>
+          <td>${(u.cdk_cost_price || 0).toFixed(2)}</td>
+          <td>${(u.balance || 0).toFixed(2)}</td>
+          <td>${u.cdk_generated || 0}</td>
+          <td><span class="tag ${u.enabled ? "ok" : "off"}">${u.enabled ? "正常" : "禁用"}</span></td>
+          <td><div class="td-actions">
+            <button class="btn small" onclick="openRechargeModal('${u.id}')">充值</button>
+            <button class="btn secondary small" onclick="openEditSubAgent('${u.id}')">改价</button>
+            <button class="btn danger small" onclick="deleteUser('${u.id}','${escAttr(u.username)}')">删除</button>
+          </div></td>
+        </tr>
+      `).join("");
+    }
+
+    function openEditSubAgent(id) {
+      openEditAgent(id);
+    }
+
+    async function createSubAgent() {
+      const d = await api("/api/admin/sub-agents", {
+        method: "POST",
+        body: {
+          username: document.getElementById("subUser").value.trim(),
+          password: document.getElementById("subPass").value,
+          display_name: document.getElementById("subName").value.trim(),
+          cdk_cost_price: parseFloat(document.getElementById("subPrice").value),
+          cdk_quota: 0,
+          note: document.getElementById("subNote").value.trim(),
+        },
+      });
+      if (!d.ok) { toast(d.message || "邀请失败", "err"); return; }
+      toast("下级代理已创建", "ok");
+      ["subUser","subPass","subName","subNote"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      loadSubAgents();
+      loadDashboard();
+    }
+
+    async function loadWallet() {
+      const d = await api("/api/admin/wallet");
+      if (!d.ok) return;
+      document.getElementById("wBalance").textContent = (d.balance || 0).toFixed(2);
+      document.getElementById("wCost").textContent = (d.cdk_cost_price || 0).toFixed(2);
+      document.getElementById("wSubCount").textContent = d.sub_agent_count || 0;
+      const tbody = document.getElementById("walletLogs");
+      const logs = d.recent_logs || [];
+      if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无分润记录</td></tr>';
+        return;
+      }
+      tbody.innerHTML = logs.map(it => `
+        <tr>
+          <td style="color:var(--muted);font-size:12px">${it.created_at || "-"}</td>
+          <td>${esc(it.from_username || "-")}</td>
+          <td>${it.cdk_count || 0}</td>
+          <td>${(it.unit_profit || 0).toFixed(4)}</td>
+          <td><b style="color:var(--ok)">+${(it.amount || 0).toFixed(4)}</b></td>
+        </tr>
+      `).join("");
+    }
+
+    function openEditAgent(id) {
+      const u = agentCache[id] || allAgentItems.find(x => x.id === id);
+      if (!u) return;
+      agentCache[id] = u;
+      document.getElementById("editAgentId").value = u.id;
+      document.getElementById("editAgentTitle").textContent = u.parent_id ? "编辑下级代理" : "编辑一级代理";
+      document.getElementById("editAgentSub").textContent = u.parent_id
+        ? `${u.username} · 上级 ${u.parent_username || u.parent_id}`
+        : `${u.username} · 一级代理`;
+      document.getElementById("editAgentName").value = u.display_name || "";
+      document.getElementById("editAgentPrice").value = u.cdk_cost_price || 0;
+      document.getElementById("editAgentNote").value = u.note || "";
+      document.getElementById("editAgentPass").value = "";
+      document.getElementById("editAgentEnabled").checked = u.enabled;
+      document.getElementById("editAgentModal").classList.add("show");
+    }
+
+    function closeEditAgent() {
+      document.getElementById("editAgentModal").classList.remove("show");
+    }
+
+    async function saveAgentEdit() {
+      const id = document.getElementById("editAgentId").value;
+      const body = {
+        display_name: document.getElementById("editAgentName").value,
+        cdk_cost_price: parseFloat(document.getElementById("editAgentPrice").value),
+        note: document.getElementById("editAgentNote").value,
+        enabled: document.getElementById("editAgentEnabled").checked,
+      };
+      const pwd = document.getElementById("editAgentPass").value;
+      if (pwd) body.password = pwd;
+      const d = await api("/api/admin/users/" + id, { method: "PUT", body });
+      if (!d.ok) { toast(d.message || "保存失败", "err"); return; }
+      toast("已保存", "ok");
+      closeEditAgent();
+      loadAgents();
+      loadSubAgents();
+    }
+
+    async function createAgent() {
+      const d = await api("/api/admin/users", {
+        method: "POST",
+        body: {
+          username: document.getElementById("agentUser").value.trim(),
+          password: document.getElementById("agentPass").value,
+          role: "agent",
+          display_name: document.getElementById("agentName").value.trim(),
+          cdk_cost_price: parseFloat(document.getElementById("agentPrice").value),
+          cdk_quota: 0,
+          note: document.getElementById("agentNote").value.trim(),
+        },
+      });
+      if (!d.ok) { toast(d.message || "创建失败", "err"); return; }
+      toast("代理已创建", "ok");
+      ["agentUser","agentPass","agentName","agentNote"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      loadAgents();
+    }
+
+    async function loadUsers() {
+      const d = await api("/api/admin/users");
+      const tbody = document.getElementById("usersTable");
+      if (!d.ok) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="5" class="empty">${esc(d.message || "加载失败")}</td></tr>`;
+        return;
+      }
+      const items = d.items || [];
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无管理员</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(u => `
+        <tr>
+          <td><b>${esc(u.username)}</b></td>
+          <td>${esc(u.display_name || "-")}</td>
+          <td><span class="tag ${u.enabled ? "ok" : "off"}">${u.enabled ? "正常" : "禁用"}</span></td>
+          <td style="color:var(--muted);font-size:12px">${u.created_at || "-"}</td>
+          <td>${u.id !== currentUser.id ? `<button class="btn danger small" onclick="deleteUser('${u.id}','${escAttr(u.username)}')">删除</button>` : "—"}</td>
+        </tr>
+      `).join("");
+    }
+
+    async function createUser() {
+      const d = await api("/api/admin/users", {
+        method: "POST",
+        body: {
+          username: document.getElementById("newUser").value.trim(),
+          password: document.getElementById("newPass").value,
+          role: "superadmin",
+          display_name: document.getElementById("newName").value.trim(),
+        },
+      });
+      if (!d.ok) { toast(d.message || "创建失败", "err"); return; }
+      toast("管理员已创建", "ok");
+      document.getElementById("newUser").value = "";
+      document.getElementById("newPass").value = "";
+      document.getElementById("newName").value = "";
+      loadUsers();
+    }
+
+    function deleteUser(id, name) {
+      showConfirm("删除账号", "确定删除「" + name + "」？其数据将无法恢复。", async () => {
+        const d = await api("/api/admin/users/" + id, { method: "DELETE" });
+        if (!d.ok) { toast(d.message || "删除失败", "err"); return; }
+        toast("已删除", "ok");
+        if (agentCache[id]) delete agentCache[id];
+        loadAgents();
+        loadSubAgents();
+        loadUsers();
+      });
+    }
+
+    async function changePassword() {
+      const old_password = document.getElementById("oldPass").value;
+      const new_password = document.getElementById("newPass2").value;
+      const confirmPwd = document.getElementById("newPass3").value;
+      if (new_password !== confirmPwd) { toast("两次新密码不一致", "err"); return; }
+      if (new_password.length < 6) { toast("新密码至少 6 位", "err"); return; }
+      const d = await api("/api/admin/password", {
+        method: "POST",
+        body: { old_password, new_password },
+      });
+      if (!d.ok) { toast(d.message || "修改失败", "err"); return; }
+      toast("密码已修改", "ok");
+      document.getElementById("oldPass").value = "";
+      document.getElementById("newPass2").value = "";
+      document.getElementById("newPass3").value = "";
+    }
+
+    document.getElementById("searchInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") doSearch();
+    });
+    document.getElementById("gameSearch").addEventListener("keydown", e => {
+      if (e.key === "Enter") gameSearchSubmit();
+    });
+    checkSession();
+  </script>
+  <script src="/static/admin-extensions.js"></script>
+  <script src="/static/admin-help.js"></script>
+</body>
+</html>

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>激活教程</title>
+  <style>
+    :root {
+      --bg: #f4f6fa;
+      --surface: #ffffff;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent-light: #dbeafe;
+      --accent2: #16a34a;
+      --warn: #d97706;
+      --radius: 14px;
+      --shadow: 0 1px 3px rgba(15,23,42,.06), 0 8px 24px rgba(15,23,42,.06);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 35%, #f4f6fa 100%);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: #1d4ed8; }
+    img { max-width: 100%; display: block; border-radius: 10px; border: 1px solid var(--border); }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 0 20px 60px; }
+    .nav {
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(12px);
+      background: rgba(255,255,255,.92);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 0 rgba(15,23,42,.04);
+    }
+    .nav-inner {
+      max-width: 920px; margin: 0 auto; padding: 14px 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .brand { font-weight: 700; font-size: 15px; letter-spacing: .02em; color: var(--text); }
+    .nav-links { display: flex; gap: 18px; font-size: 14px; }
+    .nav-links a { color: var(--muted); font-weight: 500; }
+    .nav-links a:hover { color: var(--accent); }
+    .hero { padding: 48px 0 28px; text-align: center; }
+    .badge {
+      display: inline-block; padding: 6px 14px; border-radius: 999px;
+      background: var(--accent-light); color: #1d4ed8; font-size: 12px; font-weight: 600; margin-bottom: 16px;
+    }
+    .hero h1 { font-size: clamp(26px, 5vw, 36px); line-height: 1.25; margin-bottom: 12px; color: #0f172a; }
+    .hero p { color: var(--muted); font-size: 16px; max-width: 640px; margin: 0 auto; }
+    .carousel {
+      margin: 24px 0; border-radius: var(--radius); overflow: hidden;
+      border: 1px solid var(--border); background: var(--card);
+      aspect-ratio: 16/7; position: relative; box-shadow: var(--shadow);
+    }
+    .carousel img { width: 100%; height: 100%; object-fit: cover; border-radius: 0; border: none; }
+    .carousel-dots {
+      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px;
+    }
+    .carousel-dots span {
+      width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.55); cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .carousel-dots span.active { background: #fff; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; margin-bottom: 24px; box-shadow: var(--shadow);
+    }
+    .card h2 { font-size: 20px; margin-bottom: 8px; color: #0f172a; }
+    .card .desc { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 12px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer;
+      font-size: 14px; font-weight: 600; transition: .15s; text-decoration: none;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; filter: none; }
+    .btn-secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .divider {
+      text-align: center; color: var(--muted); font-size: 13px; margin: 28px 0;
+      position: relative;
+    }
+    .divider::before, .divider::after {
+      content: ""; position: absolute; top: 50%; width: 38%; height: 1px; background: var(--border);
+    }
+    .divider::before { left: 0; }
+    .divider::after { right: 0; }
+    .section-title { font-size: 22px; margin: 8px 0 20px; color: #0f172a; }
+    .step {
+      display: grid; grid-template-columns: 48px 1fr; gap: 16px; margin-bottom: 28px;
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 20px; box-shadow: var(--shadow);
+    }
+    .step-num {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: var(--accent-light); color: #1d4ed8;
+      display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px;
+    }
+    .step h3 { font-size: 18px; margin-bottom: 8px; color: #0f172a; }
+    .step-body { color: var(--muted); font-size: 14px; white-space: pre-wrap; margin-bottom: 14px; }
+    .cmd-box {
+      display: flex; align-items: stretch; gap: 0; margin: 12px 0;
+      border: 1px solid #cbd5e1; border-radius: 10px; overflow: hidden; background: #f8fafc;
+    }
+    .cmd-label {
+      padding: 12px 14px; background: #eef2ff;
+      color: #475569; font-family: ui-monospace, monospace; font-size: 13px; white-space: nowrap;
+      border-right: 1px solid #e2e8f0;
+    }
+    .cmd-text {
+      flex: 1; padding: 12px 14px; font-family: ui-monospace, monospace; font-size: 13px;
+      color: #0f766e; overflow-x: auto; background: #fff;
+    }
+    .cmd-copy {
+      padding: 0 16px; border: none; border-left: 1px solid #e2e8f0;
+      background: #ecfdf5; color: #059669;
+      cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+    .cmd-copy:hover { background: #d1fae5; }
+    .cmd-copy.copied { background: #a7f3d0; color: #047857; }
+    .fallback-title { font-size: 13px; color: var(--muted); margin: 16px 0 8px; }
+    .step-images { display: grid; gap: 16px; margin-top: 12px; }
+    .step-images.two { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .figcap { font-size: 12px; color: var(--muted); text-align: center; margin-top: 8px; }
+    .notice {
+      border-left: 3px solid var(--warn); padding: 16px 18px;
+      background: #fffbeb; border-radius: 0 10px 10px 0; margin-top: 8px;
+      border: 1px solid #fde68a; border-left-width: 3px;
+    }
+    .notice h4 { font-size: 14px; margin-bottom: 8px; color: #b45309; }
+    .notice ul { padding-left: 18px; color: #78350f; font-size: 13px; }
+    .notice li { margin-bottom: 4px; }
+    .tips-card {
+      background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+      border: 1px solid #bfdbfe; border-radius: var(--radius); padding: 22px;
+      box-shadow: var(--shadow);
+    }
+    .tips-card .tag { font-size: 12px; color: #2563eb; font-weight: 600; margin-bottom: 6px; }
+    .tips-card h3 { font-size: 17px; margin-bottom: 8px; color: #0f172a; }
+    .tips-card p { color: var(--muted); font-size: 14px; white-space: pre-wrap; }
+    .extra-links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+    footer {
+      text-align: center; color: var(--muted); font-size: 12px; padding: 32px 20px 40px;
+      border-top: 1px solid var(--border); margin-top: 20px;
+    }
+    .disabled-page {
+      min-height: 60vh; display: flex; align-items: center; justify-content: center; color: var(--muted);
+    }
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #065f46; color: #ecfdf5; padding: 10px 18px; border-radius: 8px; font-size: 13px;
+      opacity: 0; transition: .25s; z-index: 200; pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,.15);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 100;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 28px; max-width: 420px; width: 100%; box-shadow: 0 20px 50px rgba(15,23,42,.15);
+    }
+    .modal h2 { font-size: 20px; margin-bottom: 10px; color: #0f172a; }
+    .modal p { color: var(--muted); font-size: 14px; white-space: pre-wrap; margin-bottom: 16px; }
+    .modal input {
+      width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border);
+      background: #fff; color: var(--text); font-size: 15px; margin-bottom: 12px;
+    }
+    .modal input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+    .modal .err { color: #dc2626; font-size: 13px; min-height: 18px; margin-bottom: 8px; }
+    .placeholder-img {
+      aspect-ratio: 16/10; background: #f1f5f9; border: 1px dashed #cbd5e1;
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 13px;
+    }
+    @media (max-width: 640px) {
+      .step { grid-template-columns: 1fr; padding: 16px; }
+      .step-num { width: 40px; height: 40px; font-size: 16px; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="passwordGate" class="modal-overlay hidden">
+    <div class="modal">
+      <h2 id="gateTitle">验证密码</h2>
+      <p id="gateDesc"></p>
+      <input id="gateInput" type="password" placeholder="请输入密码" autocomplete="off" />
+      <div class="err" id="gateErr"></div>
+      <button class="btn btn-primary" style="width:100%" id="gateSubmit">验证密码</button>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="brand" id="navBrand">官方教程</div>
+      <div class="nav-links">
+        <a href="#steps">教程步骤</a>
+        <a href="#tips" id="navTipsLink">小贴士</a>
+      </div>
+    </div>
+  </nav>
+
+  <div id="app" class="wrap">
+    <div class="disabled-page">加载中…</div>
+  </div>
+
+  <div class="toast" id="toast">已复制到剪贴板</div>
+
+  <script>
+    let cfg = null;
+    let carouselIdx = 0;
+    let carouselTimer = null;
+
+    function toast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 1800);
+    }
+
+    async function copyText(text, btn) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+      }
+      if (btn) {
+        const old = btn.textContent;
+        btn.textContent = "已复制";
+        btn.classList.add("copied");
+        setTimeout(() => { btn.textContent = old; btn.classList.remove("copied"); }, 1500);
+      } else {
+        toast("已复制到剪贴板");
+      }
+    }
+
+    function esc(s) {
+      return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+    }
+
+    function cmdHtml(label, cmd) {
+      const id = "cmd-" + Math.random().toString(36).slice(2, 8);
+      return `<div class="cmd-box">
+        <span class="cmd-label">${esc(label)}</span>
+        <code class="cmd-text" id="${id}">${esc(cmd)}</code>
+        <button class="cmd-copy" type="button" data-copy="${esc(cmd)}">复制</button>
+      </div>`;
+    }
+
+    function renderImage(img) {
+      const url = (img && img.url || "").trim();
+      const cap = esc(img && img.caption || "");
+      if (!url) return `<div class="placeholder-img">暂无配图</div>${cap ? `<div class="figcap">${cap}</div>` : ""}`;
+      return `<img src="${esc(url)}" alt="${cap}" loading="lazy" />${cap ? `<div class="figcap">${cap}</div>` : ""}`;
+    }
+
+    function renderPage(c) {
+      document.title = c.page_title || "激活教程";
+      document.getElementById("navBrand").textContent = c.nav_brand || "官方教程";
+      if (!c.tips_enabled) document.getElementById("navTipsLink").style.display = "none";
+
+      let html = `
+        <section class="hero">
+          <div class="badge">${esc(c.hero_badge)}</div>
+          <h1>${esc(c.hero_title)}</h1>
+          <p>${esc(c.hero_subtitle)}</p>
+        </section>`;
+
+      if (c.carousel_enabled && c.carousel_images && c.carousel_images.length) {
+        html += `<div class="carousel" id="carousel"><img id="carouselImg" src="" alt="" /></div>`;
+      }
+
+      if (c.installer_enabled) {
+        html += `<section class="card">
+          <h2>${esc(c.installer_title)}</h2>
+          <p class="desc">${esc(c.installer_desc)}</p>
+          <div class="btn-row">
+            ${c.installer_url ? `<a class="btn btn-primary" href="${esc(c.installer_url)}" target="_blank" rel="noopener">${esc(c.installer_btn_label)}</a>` : `<span class="btn btn-secondary" style="opacity:.5;cursor:default">${esc(c.installer_btn_label)}</span>`}
+            ${c.installer_btn2_label ? `<a class="btn btn-secondary" href="${esc(c.installer_btn2_url || "#steps")}">${esc(c.installer_btn2_label)}</a>` : ""}
+          </div>
+        </section>`;
+      }
+
+      if (c.manual_divider) html += `<div class="divider">${esc(c.manual_divider)}</div>`;
+
+      html += `<section id="steps"><h2 class="section-title">${esc(c.steps_section_title || "激活步骤")}</h2>`;
+      (c.steps || []).forEach((step, i) => {
+        html += `<article class="step">
+          <div class="step-num">${i + 1}</div>
+          <div>
+            <h3>${esc(step.title)}</h3>
+            <div class="step-body">${esc(step.body)}</div>`;
+        if (step.show_primary_cmd) {
+          html += cmdHtml(c.primary_cmd_label || "PS>", c.primary_cmd || "");
+          if (step.show_fallback_cmds !== false && c.fallback_cmds && c.fallback_cmds.length) {
+            html += `<div class="fallback-title">如果主口令连接失败，请尝试备用口令：</div>`;
+            c.fallback_cmds.forEach(fb => {
+              html += cmdHtml(c.primary_cmd_label || "PS>", fb.cmd || "");
+            });
+          }
+        }
+        const imgs = step.images || [];
+        if (imgs.length) {
+          html += `<div class="step-images${imgs.length > 1 ? " two" : ""}">`;
+          imgs.forEach(img => { html += `<div>${renderImage(img)}</div>`; });
+          html += `</div>`;
+        }
+        html += `</div></article>`;
+      });
+      html += `</section>`;
+
+      if (c.notices && c.notices.length) {
+        html += `<div class="notice"><h4>${esc(c.notices_title || "请注意")}</h4><ul>`;
+        c.notices.forEach(n => { html += `<li>${esc(n)}</li>`; });
+        html += `</ul></div>`;
+      }
+
+      if (c.tips_enabled) {
+        html += `<section id="tips" style="margin-top:32px">
+          <h2 class="section-title">${esc(c.tips_section_title || "小贴士")}</h2>
+          <div class="tips-card">
+            <div class="tag">${esc(c.tips_card_title || "实用提示")}</div>
+            <h3>${esc(c.tips_heading)}</h3>
+            <p>${esc(c.tips_body)}</p>
+          </div>
+        </section>`;
+      }
+
+      if (c.extra_links && c.extra_links.length) {
+        html += `<section style="margin-top:28px">
+          <h2 class="section-title">${esc(c.extra_links_title || "更多资源")}</h2>
+          <div class="extra-links">`;
+        c.extra_links.forEach(lk => {
+          html += `<a class="btn btn-secondary" href="${esc(lk.url || "#")}">${esc(lk.label)}</a>`;
+        });
+        html += `</div></section>`;
+      }
+
+      html += `<footer>${esc(c.footer_text)}</footer>`;
+      document.getElementById("app").innerHTML = html;
+
+      document.querySelectorAll("[data-copy]").forEach(btn => {
+        btn.addEventListener("click", () => copyText(btn.getAttribute("data-copy"), btn));
+      });
+
+      if (c.carousel_enabled && c.carousel_images && c.carousel_images.length) {
+        startCarousel(c.carousel_images);
+      }
+    }
+
+    function startCarousel(images) {
+      const valid = images.filter(x => (x.url || "").trim());
+      if (!valid.length) return;
+      const imgEl = document.getElementById("carouselImg");
+      function show(i) {
+        carouselIdx = (i + valid.length) % valid.length;
+        imgEl.src = valid[carouselIdx].url;
+        imgEl.alt = valid[carouselIdx].caption || "";
+      }
+      show(0);
+      clearInterval(carouselTimer);
+      if (valid.length > 1) carouselTimer = setInterval(() => show(carouselIdx + 1), 4500);
+    }
+
+    async function verifyPassword(pwd) {
+      const r = await fetch("/api/public/help-tutorial/verify-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwd }),
+      });
+      return r.json();
+    }
+
+    function showPasswordGate(c) {
+      const overlay = document.getElementById("passwordGate");
+      document.getElementById("gateTitle").textContent = c.password_gate_title || "验证密码";
+      document.getElementById("gateDesc").textContent = c.password_gate_desc || "";
+      overlay.classList.remove("hidden");
+      const input = document.getElementById("gateInput");
+      const err = document.getElementById("gateErr");
+      const submit = () => {
+        verifyPassword(input.value.trim()).then(d => {
+          if (d.ok) {
+            overlay.classList.add("hidden");
+            sessionStorage.setItem("help_tutorial_unlocked", "1");
+            if (c.password_gate_redirect) window.location.href = c.password_gate_redirect;
+          } else {
+            err.textContent = d.message || "密码错误，请重新输入";
+          }
+        });
+      };
+      document.getElementById("gateSubmit").onclick = submit;
+      input.onkeydown = e => { if (e.key === "Enter") submit(); };
+      input.focus();
+    }
+
+    async function init() {
+      try {
+        const r = await fetch("/api/public/help-tutorial");
+        const d = await r.json();
+        if (!d.ok) {
+          document.getElementById("app").innerHTML = `<div class="disabled-page">${esc(d.message || "加载失败")}</div>`;
+          return;
+        }
+        cfg = d.tutorial;
+        if (!cfg.enabled) {
+          document.getElementById("app").innerHTML = `<div class="disabled-page">教程页暂未启用</div>`;
+          return;
+        }
+        if (cfg.password_gate_enabled && cfg.password_gate_title) {
+          if (sessionStorage.getItem("help_tutorial_unlocked") !== "1") {
+            showPasswordGate(cfg);
+          }
+        }
+        renderPage(cfg);
+      } catch (e) {
+        document.getElementById("app").innerHTML = `<div class="disabled-page">无法加载教程内容</div>`;
+      }
+    }
+    init();
+  </script>
+</body>
+</html>

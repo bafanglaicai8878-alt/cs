@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CDK 查询 - CS Steam</title>
+  <link rel="stylesheet" href="/static/theme.css" />
+  <style>
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 13px; color: #6b7280; margin-bottom: 6px; font-weight: 500; }
+    .field input { width: 100%; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 10px; font-size: 15px; box-sizing: border-box; }
+    .field input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+    .btn { width: 100%; padding: 13px; background: #6366f1; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .btn:hover { background: #4f46e5; }
+    .result { margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 10px; font-size: 14px; line-height: 1.85; display: none; border: 1px solid #e5e7eb; }
+    .result.show { display: block; }
+    .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+    .tag.ok { background: #d1fae5; color: #047857; }
+    .tag.off { background: #fee2e2; color: #b91c1c; }
+  </style>
+</head>
+<body class="public-page">
+  <div class="pub-header">
+    <h1>CDK 状态查询</h1>
+    <p>输入激活码，查看绑定游戏与使用状态</p>
+  </div>
+  <div class="pub-card">
+    <div class="field"><label>CDK 激活码</label><input id="cdk" placeholder="XXXX-XXXX-XXXX-XXXX" /></div>
+    <div class="field"><label>机器码（可选）</label><input id="machine" placeholder="用于核对激活设备" /></div>
+    <button class="btn" onclick="lookup()">查询</button>
+    <div id="result" class="result"></div>
+  </div>
+  <nav class="pub-nav">
+    <a href="__PUBLIC_URL__">首页</a>
+    <a href="__PUBLIC_URL__/shop">卡密商城</a>
+    <a href="__PUBLIC_URL__/admin/login">管理登录</a>
+  </nav>
+  <script>
+    const BASE = "__PUBLIC_URL__";
+    async function lookup() {
+      const cdk = document.getElementById("cdk").value.trim();
+      const machine = document.getElementById("machine").value.trim();
+      const box = document.getElementById("result");
+      if (!cdk) { box.className = "result show"; box.textContent = "请输入 CDK"; return; }
+      const r = await fetch(BASE + "/api/public/cdk/lookup?" + new URLSearchParams({ cdk, machine })).then(x => x.json());
+      box.className = "result show";
+      if (!r.ok) { box.textContent = r.message || "查询失败"; return; }
+      const used = r.used ? '<span class="tag off">已使用</span>' : '<span class="tag ok">未使用</span>';
+      box.innerHTML = [`状态：${used}`, `游戏：${r.name || r.appid} (${r.appid})`, r.used_at && `激活：${r.used_at}`, r.used_machine && `设备：${r.used_machine}`, r.expires_at && `过期：${r.expires_at}`].filter(Boolean).join("<br>");
+    }
+  </script>
+</body>
+</html>

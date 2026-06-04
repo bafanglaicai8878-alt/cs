@@ -1,0 +1,8 @@
+{
+  "settings": {
+    "one_time_use": true,
+    "allow_reuse_on_same_machine": false,
+    "secret": "请与 config.json 中 CDK.secret 保持一致"
+  },
+  "keys": {}
+}
